@@ -61,7 +61,7 @@
       <!-- Grid -->
       <div v-if="filteredCostumes.length > 0" class="row g-4">
         <div
-          v-for="(costume, i) in filteredCostumes"
+          v-for="(costume, i) in paginatedCostumes"
           :key="costume.id"
           class="col-md-6 col-lg-4 col-xl-3 reveal"
           :style="{ transitionDelay: (i % 4) * 0.1 + 's' }"
@@ -78,6 +78,31 @@
         </h4>
         <p class="text-muted">Try adjusting your search or category filter</p>
         <button class="btn btn-primary mt-3" @click="resetFilters">Clear Filters</button>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="filteredCostumes.length > pageSize" class="d-flex justify-content-center mt-4">
+        <nav class="pagination-nav">
+          <button class="page-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+            ‹
+          </button>
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            class="page-btn"
+            :class="{ active: page === currentPage }"
+            @click="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+          <button
+            class="page-btn"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(currentPage + 1)"
+          >
+            ›
+          </button>
+        </nav>
       </div>
     </div>
 
@@ -97,6 +122,8 @@ const bookingModal = ref(null)
 const selectedCostume = ref(null)
 const selectedCategory = ref('All')
 const searchQuery = ref('')
+const currentPage = ref(1)
+const pageSize = 8
 
 // Fetch costumes & categories from API
 onMounted(async () => {
@@ -116,12 +143,30 @@ const filteredCostumes = computed(() => {
         c.description.toLowerCase().includes(q),
     )
   }
+  currentPage.value = 1
   return result
 })
+
+const totalPages = computed(() =>
+  filteredCostumes.value.length === 0
+    ? 1
+    : Math.ceil(filteredCostumes.value.length / pageSize),
+)
+
+const paginatedCostumes = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredCostumes.value.slice(start, start + pageSize)
+})
+
+const goToPage = (page) => {
+  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const resetFilters = () => {
   selectedCategory.value = 'All'
   searchQuery.value = ''
+  currentPage.value = 1
 }
 const openBooking = (costume) => {
   selectedCostume.value = costume
@@ -155,7 +200,25 @@ onMounted(() => {
     },
     { flush: 'post' },
   )
+  // Also when switching pages so new page cards animate in
+  watch(
+    paginatedCostumes,
+    async () => {
+      await nextTick()
+      observeRevealElements()
+    },
+    { flush: 'post' },
+  )
 })
+
+// Keep page within bounds when filters change
+watch(
+  filteredCostumes,
+  () => {
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
+  },
+  { flush: 'post' },
+)
 </script>
 
 <style scoped>
@@ -219,5 +282,41 @@ onMounted(() => {
 }
 .luxury-search input::placeholder {
   color: var(--text-muted);
+}
+
+.pagination-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff;
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  box-shadow: 0 8px 26px rgba(15, 15, 26, 0.08);
+}
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--charcoal-2);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: all 0.18s ease;
+}
+.page-btn:hover:not(:disabled) {
+  border-color: rgba(201, 168, 76, 0.6);
+  color: var(--charcoal);
+}
+.page-btn.active {
+  background: linear-gradient(135deg, var(--charcoal), var(--charcoal-2));
+  color: var(--gold);
+  border-color: var(--charcoal-2);
+  box-shadow: 0 6px 14px rgba(15, 15, 26, 0.18);
+}
+.page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>
