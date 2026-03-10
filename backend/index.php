@@ -49,12 +49,19 @@ if (isset($_GET['url'])) {
 $url = trim($rawUrl, '/');
 $segments = $url ? explode('/', $url) : [];
 
-$resource = $segments[0] ?? '';      // "costumes" | "bookings"
-$idOrSub = $segments[1] ?? '';      // numeric id OR "categories"
+$resource = $segments[0] ?? '';      // "costumes" | "bookings" | "auth"
+$idOrSub = $segments[1] ?? '';      // numeric id OR "categories" OR auth action
 $subAction = $segments[2] ?? '';      // "cancel"
 
 // Map URL segments to ?action= convention used inside api files
 switch ($resource) {
+    case 'auth':
+        // /api/auth/register  →  ?action=register
+        // /api/auth/login     →  ?action=login
+        $_GET['action'] = $idOrSub ?: 'login';
+        require __DIR__ . '/api/auth.php';
+        break;
+
     case 'costumes':
         if ($idOrSub === 'categories') {
             $_GET['action'] = 'categories';
