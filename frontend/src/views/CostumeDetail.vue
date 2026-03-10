@@ -58,11 +58,6 @@
             >
           </div>
 
-          <div class="price-display mb-4">
-            <span class="price-large">${{ costume.price }}</span>
-            <span class="price-unit">/day</span>
-          </div>
-
           <hr class="hr-gold" style="margin: 1.5rem 0" />
 
           <p
@@ -189,24 +184,6 @@ const onBooked = () => alert('Booking confirmed! Check your email for details.')
   bottom: 0;
   right: 0;
   border-width: 0 2px 2px 0;
-}
-
-.price-display {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.price-large {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.8rem;
-  font-weight: 900;
-  color: var(--gold);
-  line-height: 1;
-}
-.price-unit {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
 }
 
 .size-chip {

@@ -2,9 +2,6 @@
   <div class="card costume-card h-100 shine-hover">
     <div class="position-relative overflow-hidden">
       <img :src="costume.image" class="card-img-top costume-image" :alt="costume.name" />
-      <span class="price-tag"
-        >${{ costume.price }}<small style="font-size: 0.65rem; opacity: 0.8">/day</small></span
-      >
       <span class="category-badge position-absolute top-0 start-0 m-3">{{ costume.category }}</span>
 
       <!-- hover overlay -->

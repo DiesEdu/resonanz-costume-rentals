@@ -1,0 +1,3 @@
+ALTER TABLE costumes MODIFY COLUMN category ENUM('TRMS', 'JCO', 'BMS', 'TRCC', 'ARMONIA') NOT NULL;
+ALTER TABLE costumes DROP COLUMN price;
+ALTER TABLE costumes ADD COLUMN container VARCHAR(255) NOT NULL AFTER category;

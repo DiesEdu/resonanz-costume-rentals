@@ -3,7 +3,7 @@
     <div class="container">
       <router-link class="navbar-brand d-flex align-items-center gap-2" to="/">
         <i class="bi bi-gem" style="color: var(--gold); font-size: 1.2rem"></i>
-        <span>CostumeRent</span>
+        <span>Resonanz Costume Rent</span>
       </router-link>
 
       <button

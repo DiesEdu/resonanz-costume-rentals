@@ -11,9 +11,6 @@
             <div class="col-md-5 mb-3 mb-md-0">
               <img :src="costume.image" class="img-fluid rounded-3 shadow-sm" :alt="costume.name" />
               <h5 class="mt-3 fw-bold">{{ costume.name }}</h5>
-              <p class="text-primary fw-bold fs-4">
-                ${{ costume.price }}<small class="text-muted fs-6">/day</small>
-              </p>
             </div>
             <div class="col-md-7">
               <form @submit.prevent="submitBooking">

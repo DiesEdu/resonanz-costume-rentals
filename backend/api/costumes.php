@@ -111,27 +111,27 @@ function createCostume(): void
 
     $name = trim($body['name'] ?? '');
     $category = trim($body['category'] ?? '');
-    $price = (float) ($body['price'] ?? 0);
+    $container = trim($body['container'] ?? '');
     $description = trim($body['description'] ?? '');
     $image = trim($body['image'] ?? '');
     $available = isset($body['available']) ? (int) $body['available'] : 1;
     $sizes = $body['sizes'] ?? [];
 
-    if (!$name || !$category || $price <= 0) {
+    if (!$name || !$category) {
         http_response_code(400);
-        echo json_encode(['error' => 'name, category, and a positive price are required']);
+        echo json_encode(['error' => 'name and category are required']);
         return;
     }
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, category, price, description, image, available)
-         VALUES (:name, :category, :price, :description, :image, :available)'
+        'INSERT INTO costumes (name, category, container, description, image, available)
+         VALUES (:name, :category, :container, :description, :image, :available)'
     );
     $stmt->execute([
         ':name' => $name,
         ':category' => $category,
-        ':price' => $price,
+        ':container' => $body['container'] ?? '',
         ':description' => $description,
         ':image' => $image,
         ':available' => $available,
@@ -162,7 +162,7 @@ function formatCostume(array $row): array
         'id' => (int) $row['id'],
         'name' => $row['name'],
         'category' => $row['category'],
-        'price' => (float) $row['price'],
+        'container' => $row['container'],
         'size' => $row['sizes'] ? explode(',', $row['sizes']) : [],
         'description' => $row['description'],
         'image' => $row['image'],

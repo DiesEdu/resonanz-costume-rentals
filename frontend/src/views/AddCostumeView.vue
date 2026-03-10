@@ -141,7 +141,7 @@
                       v-model="form.name"
                       type="text"
                       class="form-input"
-                      placeholder="e.g. Medieval Knight Armor"
+                      placeholder="e.g. Kain Batik Biru"
                       @blur="validateField('name')"
                       @input="clearError('name')"
                     />
@@ -166,19 +166,18 @@
                     <span class="label-icon">✦</span> Category <span class="required">*</span>
                   </label>
                   <div class="input-wrapper">
-                    <input
+                    <select
                       id="category"
                       v-model="form.category"
-                      type="text"
                       class="form-input"
-                      list="category-options"
-                      placeholder="Fantasy, Historical…"
+                      @change="clearError('category')"
                       @blur="validateField('category')"
-                      @input="clearError('category')"
-                    />
-                    <datalist id="category-options">
-                      <option v-for="cat in existingCategories" :key="cat" :value="cat" />
-                    </datalist>
+                    >
+                      <option disabled value="">Select a category</option>
+                      <option v-for="cat in existingCategories" :key="cat" :value="cat">
+                        {{ cat }}
+                      </option>
+                    </select>
                     <span class="input-valid-icon" v-if="form.category && !errors.category">✓</span>
                   </div>
                   <transition name="err"
@@ -188,33 +187,34 @@
                   >
                 </div>
 
-                <!-- Price -->
+                <!-- Container -->
                 <div
                   class="form-group"
-                  :class="{ 'has-error': errors.price, 'is-valid': form.price && !errors.price }"
+                  :class="{
+                    'has-error': errors.container,
+                    'is-valid': form.container && !errors.container,
+                  }"
                 >
-                  <label for="price" class="form-label">
-                    <span class="label-icon">✦</span> Rental Price / day
-                    <span class="required">*</span>
+                  <label for="container" class="form-label">
+                    <span class="label-icon">✦</span> Container <span class="required">*</span>
                   </label>
-                  <div class="input-prefix-wrapper">
-                    <span class="input-prefix">Rp</span>
+                  <div class="input-wrapper">
                     <input
-                      id="price"
-                      v-model="form.price"
-                      type="number"
-                      class="form-input with-prefix"
-                      placeholder="0"
-                      min="0"
-                      step="1000"
-                      @blur="validateField('price')"
-                      @input="clearError('price')"
+                      id="container"
+                      v-model="form.container"
+                      type="text"
+                      class="form-input"
+                      placeholder="e.g. Box A3, Shelf 2"
+                      @blur="validateField('container')"
+                      @input="clearError('container')"
                     />
-                    <span class="input-valid-icon" v-if="form.price && !errors.price">✓</span>
+                    <span class="input-valid-icon" v-if="form.container && !errors.container"
+                      >✓</span
+                    >
                   </div>
                   <transition name="err"
-                    ><span v-if="errors.price" class="error-text">{{
-                      errors.price
+                    ><span v-if="errors.container" class="error-text">{{
+                      errors.container
                     }}</span></transition
                   >
                 </div>
@@ -404,12 +404,6 @@
                     <span class="summary-val">{{ form.category || '—' }}</span>
                   </div>
                   <div class="summary-item">
-                    <span class="summary-key">Price</span>
-                    <span class="summary-val"
-                      >Rp {{ Number(form.price || 0).toLocaleString('id-ID') }}</span
-                    >
-                  </div>
-                  <div class="summary-item">
                     <span class="summary-key">Sizes</span>
                     <span class="summary-val">{{
                       form.sizes.length ? form.sizes.join(', ') : '—'
@@ -522,7 +516,7 @@ const stepProgress = computed(() => (currentStep.value / (steps.length - 1)) * 1
 const form = ref({
   name: '',
   category: '',
-  price: '',
+  container: '',
   description: '',
   image: '',
   available: true,
@@ -565,11 +559,6 @@ function validateField(field) {
   if (field === 'name' && !form.value.name.trim()) errors.value.name = 'Costume name is required.'
   if (field === 'category' && !form.value.category.trim())
     errors.value.category = 'Category is required.'
-  if (field === 'price') {
-    const p = Number(form.value.price)
-    if (!form.value.price || isNaN(p) || p <= 0)
-      errors.value.price = 'Enter a valid price greater than 0.'
-  }
   if (field === 'description' && form.value.description.length > 500)
     errors.value.description = 'Description must be 500 characters or fewer.'
   if (field === 'sizes' && form.value.sizes.length === 0)
@@ -578,8 +567,8 @@ function validateField(field) {
 
 function validateStep(step) {
   if (step === 0) {
-    ;['name', 'category', 'price'].forEach(validateField)
-    return !errors.value.name && !errors.value.category && !errors.value.price
+    ;['name', 'category'].forEach(validateField)
+    return !errors.value.name && !errors.value.category
   }
   if (step === 1) {
     validateField('sizes')
@@ -614,7 +603,6 @@ async function handleSubmit() {
     const payload = {
       name: form.value.name.trim(),
       category: form.value.category.trim(),
-      price: Number(form.value.price),
       description: form.value.description.trim(),
       image: form.value.image.trim(),
       available: form.value.available ? 1 : 0,
@@ -625,7 +613,6 @@ async function handleSubmit() {
     form.value = {
       name: '',
       category: '',
-      price: '',
       description: '',
       image: '',
       available: true,

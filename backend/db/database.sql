@@ -19,8 +19,8 @@ USE costume_rental;
 CREATE TABLE IF NOT EXISTS costumes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(100) NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
+    category ENUM('TRMS', 'JCO', 'BMS', 'TRCC', 'ARMONIA') NOT NULL,
+    container VARCHAR(255) NOT NULL,
     description TEXT,
     image VARCHAR(500),
     available TINYINT(1) NOT NULL DEFAULT 1,
