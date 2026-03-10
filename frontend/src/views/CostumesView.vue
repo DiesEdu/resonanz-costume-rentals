@@ -86,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import CostumeCard from '@/components/CostumeCard.vue'
 import CategoryFilter from '@/components/CategoryFilter.vue'
 import BookingModal from '@/components/BookingModal.vue'
@@ -129,15 +129,32 @@ const openBooking = (costume) => {
 }
 const onBooked = () => alert('Booking confirmed! Check your email for details.')
 
+// Animate elements with the "reveal" helper, including ones rendered after data loads
+let revealObserver
+const observeRevealElements = () => {
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add('visible')
+        }),
+      { threshold: 0.08 },
+    )
+  }
+  document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el))
+}
+
 onMounted(() => {
-  const obs = new IntersectionObserver(
-    (entries) =>
-      entries.forEach((e) => {
-        if (e.isIntersecting) e.target.classList.add('visible')
-      }),
-    { threshold: 0.08 },
+  observeRevealElements()
+  // Re-run observer when the grid updates so new cards become visible
+  watch(
+    filteredCostumes,
+    async () => {
+      await nextTick()
+      observeRevealElements()
+    },
+    { flush: 'post' },
   )
-  document.querySelectorAll('.reveal').forEach((el) => obs.observe(el))
 })
 </script>
 

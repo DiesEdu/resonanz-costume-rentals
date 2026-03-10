@@ -23,7 +23,7 @@
           Back to Collection
         </router-link>
 
-        <div class="hero-badge">
+        <!-- <div class="hero-badge">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -39,7 +39,7 @@
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           New Costume
-        </div>
+        </div> -->
 
         <h1 class="hero-title">Add to the <span class="gold-text">Collection</span></h1>
         <p class="hero-subtitle">
@@ -658,7 +658,8 @@ async function handleSubmit() {
     var(--charcoal-3, #16213e) 60%,
     #1e0a3c 100%
   );
-  padding: 3.5rem 0 4rem;
+  /* Extra top padding so the fixed navbar never overlaps */
+  padding: 6.5rem 0 4rem;
   color: #fff;
 }
 
@@ -762,19 +763,17 @@ async function handleSubmit() {
 /* ── Step indicators ─────────────────────────────────────────────────────── */
 .step-indicators {
   position: relative;
-  display: flex;
-  gap: 2.5rem;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem 1.4rem;
+  padding: 1.1rem 1.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
 }
 
 .step-line {
-  position: absolute;
-  top: 18px;
-  left: 18px;
-  right: 18px;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.12);
-  z-index: 0;
+  display: none;
 }
 .step-line-fill {
   height: 100%;
@@ -786,24 +785,28 @@ async function handleSubmit() {
   position: relative;
   z-index: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.25s;
 }
 
 .step-num {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.7);
   transition: all 0.3s;
 }
 .step-dot.active .step-num {
@@ -819,11 +822,12 @@ async function handleSubmit() {
 }
 
 .step-label {
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
-  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: normal;
+  line-height: 1.35;
   transition: color 0.3s;
 }
 .step-dot.active .step-label {
@@ -831,6 +835,47 @@ async function handleSubmit() {
 }
 .step-dot.done .step-label {
   color: rgba(255, 255, 255, 0.55);
+}
+
+@media (max-width: 768px) {
+  .page-hero {
+    padding-top: 7.5rem; /* slightly more on mobile where nav is taller */
+  }
+  .step-indicators {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 992px) {
+  .step-indicators {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    background: transparent;
+    border: none;
+  }
+  .step-line {
+    display: block;
+    position: absolute;
+    top: 100%; /* align with center of 34px step circle */
+    left: 17px;
+    right: 17px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.12);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .step-dot {
+    flex-direction: column;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .step-label {
+    white-space: nowrap;
+    text-align: center;
+  }
 }
 
 /* ── Form Section ─────────────────────────────────────────────────────────── */
