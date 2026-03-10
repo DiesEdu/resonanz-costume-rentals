@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import BookingModal from '@/components/BookingModal.vue'
 import { useCostumesStore } from '@/stores/costumes'
@@ -125,8 +125,11 @@ import { useCostumesStore } from '@/stores/costumes'
 const route = useRoute()
 const costumesStore = useCostumesStore()
 const bookingModal = ref(null)
+const costume = ref(null)
 
-const costume = computed(() => costumesStore.getCostumeById(route.params.id))
+onMounted(async () => {
+  costume.value = await costumesStore.getCostumeById(route.params.id)
+})
 
 const assurances = [
   { icon: 'bi-shield-check', text: 'Professionally cleaned & inspected' },

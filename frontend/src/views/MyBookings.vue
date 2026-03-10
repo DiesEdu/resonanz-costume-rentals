@@ -110,11 +110,15 @@ const formatDate = (dateString) =>
     year: 'numeric',
   })
 
-const cancelBooking = (id) => {
-  if (confirm('Are you sure you want to cancel this booking?')) bookingsStore.cancelBooking(id)
+const cancelBooking = async (id) => {
+  if (confirm('Are you sure you want to cancel this booking?')) {
+    await bookingsStore.cancelBooking(id)
+  }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await bookingsStore.fetchBookings()
+
   const obs = new IntersectionObserver(
     (entries) =>
       entries.forEach((e) => {

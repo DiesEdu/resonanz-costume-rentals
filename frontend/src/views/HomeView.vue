@@ -167,6 +167,11 @@ const selectedCostume = ref(null)
 
 const featuredCostumes = computed(() => costumesStore.costumes.slice(0, 4))
 
+// Fetch data from API on mount
+onMounted(async () => {
+  await costumesStore.fetchCostumes()
+})
+
 const steps = [
   {
     icon: 'bi-search',

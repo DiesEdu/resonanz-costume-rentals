@@ -1,50 +1,83 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export const useBookingsStore = defineStore('bookings', () => {
-  const bookings = ref([
-    {
-      id: 1,
-      costumeId: 2,
-      costumeName: 'Superhero Spider Suit',
-      costumeImage:
-        'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500&auto=format&fit=crop&q=60',
-      customerName: 'John Doe',
-      email: 'john@example.com',
-      phone: '555-0123',
-      startDate: '2026-03-15',
-      endDate: '2026-03-18',
-      size: 'M',
-      totalPrice: 195,
-      status: 'confirmed',
-      bookingDate: '2026-03-10',
-    },
-  ])
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/costume-rental/backend'
 
-  const addBooking = (booking) => {
-    const newBooking = {
-      id: Date.now(),
-      ...booking,
-      status: 'pending',
-      bookingDate: new Date().toISOString().split('T')[0],
+export const useBookingsStore = defineStore('bookings', () => {
+  const bookings = ref([])
+  const loading = ref(false)
+  const error = ref(null)
+
+  // ── Fetch bookings (optionally filter by email) ────────────────────────────
+  const fetchBookings = async (email = '') => {
+    loading.value = true
+    error.value = null
+    try {
+      const qs = email ? '?email=' + encodeURIComponent(email) : ''
+      const res = await fetch(`${API_BASE}/api/bookings${qs}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      bookings.value = json.data
+    } catch (err) {
+      error.value = err.message
+    } finally {
+      loading.value = false
     }
-    bookings.value.push(newBooking)
-    return newBooking
   }
 
-  const cancelBooking = (id) => {
-    const index = bookings.value.findIndex((b) => b.id === id)
-    if (index !== -1) {
-      bookings.value[index].status = 'cancelled'
+  // ── Add a new booking ──────────────────────────────────────────────────────
+  const addBooking = async (booking) => {
+    error.value = null
+    try {
+      const res = await fetch(`${API_BASE}/api/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(booking),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? `HTTP ${res.status}`)
+      }
+      const json = await res.json()
+      bookings.value.unshift(json.data)
+      return json.data
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  // ── Cancel a booking ───────────────────────────────────────────────────────
+  const cancelBooking = async (id) => {
+    error.value = null
+    try {
+      const res = await fetch(`${API_BASE}/api/bookings/${id}/cancel`, {
+        method: 'PUT',
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? `HTTP ${res.status}`)
+      }
+      const json = await res.json()
+      const index = bookings.value.findIndex((b) => b.id === id)
+      if (index !== -1) {
+        bookings.value[index] = json.data
+      }
+    } catch (err) {
+      error.value = err.message
+      throw err
     }
   }
 
   const getUserBookings = () => {
-    return bookings.value.sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate))
+    return [...bookings.value].sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate))
   }
 
   return {
     bookings,
+    loading,
+    error,
+    fetchBookings,
     addBooking,
     cancelBooking,
     getUserBookings,

@@ -93,6 +93,11 @@ const selectedCostume = ref(null)
 const selectedCategory = ref('All')
 const searchQuery = ref('')
 
+// Fetch costumes & categories from API
+onMounted(async () => {
+  await Promise.all([costumesStore.fetchCostumes(), costumesStore.fetchCategories()])
+})
+
 const filteredCostumes = computed(() => {
   let result = costumesStore.costumes
   if (selectedCategory.value !== 'All')

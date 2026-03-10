@@ -1,0 +1,10 @@
+Options -Indexes
+
+RewriteEngine On
+
+# Allow direct access to existing files/directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything under /api/* to index.php
+RewriteRule ^api/(.*)$ index.php?url=$1 [QSA,L]
