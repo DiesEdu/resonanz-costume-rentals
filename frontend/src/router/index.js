@@ -39,6 +39,11 @@ const router = createRouter({
       name: 'register',
       component: () => import('../views/RegisterView.vue'),
     },
+    {
+      path: '/costumes/add',
+      name: 'add-costume',
+      component: () => import('../views/AddCostumeView.vue'),
+    },
   ],
 })
 

@@ -69,6 +69,7 @@ switch ($resource) {
             $_GET['action'] = 'get';
             $_GET['id'] = $idOrSub;
         } else {
+            // list (GET) or create (POST) – handled inside costumes.php by HTTP method
             $_GET['action'] = 'list';
         }
         require __DIR__ . '/api/costumes.php';

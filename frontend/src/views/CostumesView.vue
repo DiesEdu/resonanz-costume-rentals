@@ -44,13 +44,18 @@
         <p class="text-muted mb-0" style="font-size: 0.85rem; letter-spacing: 0.08em">
           Showing <strong style="color: var(--gold)">{{ filteredCostumes.length }}</strong> costumes
         </p>
-        <button
-          v-if="selectedCategory !== 'All' || searchQuery"
-          class="btn btn-outline-primary btn-sm"
-          @click="resetFilters"
-        >
-          <i class="bi bi-x-circle me-1"></i> Clear Filters
-        </button>
+        <div class="d-flex gap-2 align-items-center">
+          <button
+            v-if="selectedCategory !== 'All' || searchQuery"
+            class="btn btn-outline-primary btn-sm"
+            @click="resetFilters"
+          >
+            <i class="bi bi-x-circle me-1"></i> Clear Filters
+          </button>
+          <router-link to="/costumes/add" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Add Costume
+          </router-link>
+        </div>
       </div>
 
       <!-- Grid -->

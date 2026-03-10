@@ -25,6 +25,10 @@ switch ($method) {
         }
         break;
 
+    case 'POST':
+        createCostume();
+        break;
+
     default:
         http_response_code(405);
         echo json_encode(['error' => 'Method not allowed']);
@@ -99,6 +103,54 @@ function getCategories(): void
     $cats = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     echo json_encode(['data' => array_merge(['All'], $cats)]);
+}
+
+function createCostume(): void
+{
+    $body = json_decode(file_get_contents('php://input'), true);
+
+    $name = trim($body['name'] ?? '');
+    $category = trim($body['category'] ?? '');
+    $price = (float) ($body['price'] ?? 0);
+    $description = trim($body['description'] ?? '');
+    $image = trim($body['image'] ?? '');
+    $available = isset($body['available']) ? (int) $body['available'] : 1;
+    $sizes = $body['sizes'] ?? [];
+
+    if (!$name || !$category || $price <= 0) {
+        http_response_code(400);
+        echo json_encode(['error' => 'name, category, and a positive price are required']);
+        return;
+    }
+
+    $db = getDB();
+    $stmt = $db->prepare(
+        'INSERT INTO costumes (name, category, price, description, image, available)
+         VALUES (:name, :category, :price, :description, :image, :available)'
+    );
+    $stmt->execute([
+        ':name' => $name,
+        ':category' => $category,
+        ':price' => $price,
+        ':description' => $description,
+        ':image' => $image,
+        ':available' => $available,
+    ]);
+
+    $costumeId = (int) $db->lastInsertId();
+
+    // Insert sizes
+    if (!empty($sizes)) {
+        $sizeStmt = $db->prepare(
+            'INSERT IGNORE INTO costume_sizes (costume_id, size) VALUES (:costume_id, :size)'
+        );
+        foreach ($sizes as $size) {
+            $sizeStmt->execute([':costume_id' => $costumeId, ':size' => $size]);
+        }
+    }
+
+    // Return the newly created costume
+    getCostume($costumeId);
 }
 
 /**

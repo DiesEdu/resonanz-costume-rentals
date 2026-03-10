@@ -73,6 +73,28 @@ export const useCostumesStore = defineStore('costumes', () => {
     )
   })
 
+  // ── Add new costume ────────────────────────────────────────────────────────
+  const addCostume = async (costumeData) => {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await fetch(`${API_BASE}/api/costumes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(costumeData),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+      costumes.value.push(json.data)
+      return json.data
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     costumes,
     categories,
@@ -83,5 +105,6 @@ export const useCostumesStore = defineStore('costumes', () => {
     getCostumeById,
     getCostumesByCategory,
     searchCostumes,
+    addCostume,
   }
 })
