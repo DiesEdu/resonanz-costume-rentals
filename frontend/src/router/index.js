@@ -44,6 +44,11 @@ const router = createRouter({
       name: 'add-costume',
       component: () => import('../views/AddCostumeView.vue'),
     },
+    {
+      path: '/manage/bookings',
+      name: 'manage-bookings',
+      component: () => import('../views/ManageBookingsView.vue'),
+    },
   ],
 })
 

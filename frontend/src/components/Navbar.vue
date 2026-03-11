@@ -9,28 +9,32 @@
       <button
         class="navbar-toggler border-0"
         type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarNav"
+        :aria-expanded="navOpen"
+        @click="toggleNav"
         style="color: var(--gold)"
       >
         <i class="bi bi-list" style="font-size: 1.6rem"></i>
       </button>
 
-      <div class="collapse navbar-collapse" id="navbarNav">
+      <div :class="['collapse navbar-collapse', { show: navOpen }]" id="navbarNav">
         <ul class="navbar-nav ms-auto align-items-center gap-1">
           <li class="nav-item">
-            <router-link class="nav-link" to="/" active-class="active" exact>Home</router-link>
+            <router-link class="nav-link" to="/" active-class="active" exact @click="closeNav">
+              Home
+            </router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/costumes" active-class="active"
-              >Costumes</router-link
-            >
+            <router-link class="nav-link" to="/costumes" active-class="active" @click="closeNav">
+              Costumes
+            </router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/about" active-class="active">About</router-link>
+            <router-link class="nav-link" to="/about" active-class="active" @click="closeNav">
+              About
+            </router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/my-bookings" active-class="active">
+            <router-link class="nav-link" to="/my-bookings" active-class="active" @click="closeNav">
               My Bookings
               <span
                 v-if="bookingCount > 0"
@@ -43,6 +47,11 @@
                 "
                 >{{ bookingCount }}</span
               >
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link" to="/manage/bookings" active-class="active" @click="closeNav">
+              Manage
             </router-link>
           </li>
 
@@ -104,6 +113,7 @@ const bookingCount = computed(() => bookingsStore.bookings.length)
 const isScrolled = ref(false)
 const userOpen = ref(false)
 const userMenuRef = ref(null)
+const navOpen = ref(false)
 
 const initials = computed(() => {
   const name = authStore.userName
@@ -130,6 +140,13 @@ function onClickOutside(e) {
 
 const onScroll = () => {
   isScrolled.value = window.scrollY > 60
+}
+
+const toggleNav = () => {
+  navOpen.value = !navOpen.value
+}
+const closeNav = () => {
+  navOpen.value = false
 }
 
 onMounted(() => {
@@ -277,5 +294,21 @@ onUnmounted(() => {
 .text-danger-soft:hover {
   background: rgba(192, 57, 43, 0.12) !important;
   color: #ff8a8a !important;
+}
+
+/* Smooth mobile collapse animation */
+@media (max-width: 991.98px) {
+  .navbar-collapse {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition:
+      max-height 0.3s ease,
+      opacity 0.25s ease;
+  }
+  .navbar-collapse.show {
+    max-height: 500px; /* ample for menu content */
+    opacity: 1;
+  }
 }
 </style>

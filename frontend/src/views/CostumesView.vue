@@ -172,7 +172,7 @@ const openBooking = (costume) => {
   selectedCostume.value = costume
   bookingModal.value.show()
 }
-const onBooked = () => alert('Booking confirmed! Check your email for details.')
+const onBooked = () => alert('Booking submitted. We will notify you after approval.')
 
 // Animate elements with the "reveal" helper, including ones rendered after data loads
 let revealObserver

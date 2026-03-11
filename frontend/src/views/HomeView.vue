@@ -230,7 +230,7 @@ const openBooking = (costume) => {
   selectedCostume.value = costume
   bookingModal.value.show()
 }
-const onBooked = () => alert('Booking confirmed! Check your email for details.')
+const onBooked = () => alert('Booking submitted. We will notify you after approval.')
 
 // Scroll-reveal observer
 onMounted(() => {

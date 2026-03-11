@@ -69,6 +69,34 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
+  // ── Update booking status (management/admin) ────────────────────────────────
+  const updateStatus = async (id, status, role = '') => {
+    error.value = null
+    try {
+      const headers = { 'Content-Type': 'application/json' }
+      if (role) headers['X-Role'] = role
+
+      const res = await fetch(`${API_BASE}/api/bookings/${id}/status`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? `HTTP ${res.status}`)
+      }
+      const json = await res.json()
+      const index = bookings.value.findIndex((b) => b.id === id)
+      if (index !== -1) {
+        bookings.value[index] = json.data
+      }
+      return json.data
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
   const getUserBookings = () => {
     return [...bookings.value].sort((a, b) => new Date(b.bookingDate) - new Date(a.bookingDate))
   }
@@ -80,6 +108,7 @@ export const useBookingsStore = defineStore('bookings', () => {
     fetchBookings,
     addBooking,
     cancelBooking,
+    updateStatus,
     getUserBookings,
   }
 })

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     phone VARCHAR(50),
+    role ENUM('admin', 'costume_management', 'user') NOT NULL DEFAULT 'user',
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -51,8 +52,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     size VARCHAR(10) NOT NULL,
-    total_price DECIMAL(10, 2) NOT NULL,
-    status ENUM('pending', 'confirmed', 'cancelled') NOT NULL DEFAULT 'pending',
+    status ENUM('waiting_approval', 'processing', 'completed', 'cancelled') NOT NULL DEFAULT 'waiting_approval',
     booking_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -92,5 +92,5 @@ INSERT INTO costume_sizes (costume_id, size) VALUES
 (12, 'S'), (12, 'M'), (12, 'L'), (12, 'XL');
 
 -- Sample booking
-INSERT INTO bookings (costume_id, costume_name, costume_image, customer_name, email, phone, start_date, end_date, size, total_price, status, booking_date) VALUES
-(2, 'Superhero Spider Suit', 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500&auto=format&fit=crop&q=60', 'John Doe', 'john@example.com', '555-0123', '2026-03-15', '2026-03-18', 'M', 195.00, 'confirmed', '2026-03-10');
+INSERT INTO bookings (costume_id, costume_name, costume_image, customer_name, email, phone, start_date, end_date, size, status, booking_date) VALUES
+(2, 'Superhero Spider Suit', 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500&auto=format&fit=crop&q=60', 'John Doe', 'john@example.com', '555-0123', '2026-03-15', '2026-03-18', 'M', 'processing', '2026-03-10');

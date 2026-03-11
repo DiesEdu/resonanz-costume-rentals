@@ -49,18 +49,8 @@
               </p>
             </div>
 
-            <!-- Price + date -->
+            <!-- Date -->
             <div class="col-md-3">
-              <div
-                style="
-                  font-family: 'Playfair Display', serif;
-                  font-size: 1.4rem;
-                  font-weight: 700;
-                  color: var(--gold);
-                "
-              >
-                ${{ booking.totalPrice }}
-              </div>
               <p class="text-muted mb-0" style="font-size: 0.78rem; letter-spacing: 0.06em">
                 Booked {{ formatDate(booking.bookingDate) }}
               </p>
@@ -69,9 +59,9 @@
             <!-- Status + Action -->
             <div class="col-md-3 text-md-end">
               <span class="status-badge mb-3 d-inline-block" :class="`status-${booking.status}`">
-                {{ booking.status.charAt(0).toUpperCase() + booking.status.slice(1) }}
+                {{ formatStatus(booking.status) }}
               </span>
-              <div v-if="booking.status === 'pending' || booking.status === 'confirmed'">
+              <div v-if="['waiting_approval', 'processing'].includes(booking.status)">
                 <button class="btn btn-outline-danger btn-sm" @click="cancelBooking(booking.id)">
                   <i class="bi bi-x-circle me-1"></i>Cancel
                 </button>
@@ -109,6 +99,13 @@ const formatDate = (dateString) =>
     day: 'numeric',
     year: 'numeric',
   })
+
+const formatStatus = (status) =>
+  status
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(' ')
 
 const cancelBooking = async (id) => {
   if (confirm('Are you sure you want to cancel this booking?')) {

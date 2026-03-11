@@ -17,12 +17,13 @@
  *   GET    /api/bookings/{id}          – get single booking
  *   POST   /api/bookings               – create booking (JSON)
  *   PUT    /api/bookings/{id}/cancel   – cancel booking
+ *   PUT    /api/bookings/{id}/status   – update booking status (processing/completed)
  */
 
 // ── CORS headers (update origin for production) ──────────────────────────────
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Role');
 header('Content-Type: application/json; charset=utf-8');
 
 // Handle preflight
@@ -78,6 +79,9 @@ switch ($resource) {
     case 'bookings':
         if (is_numeric($idOrSub) && $subAction === 'cancel') {
             $_GET['action'] = 'cancel';
+            $_GET['id'] = $idOrSub;
+        } elseif (is_numeric($idOrSub) && $subAction === 'status') {
+            $_GET['action'] = 'status';
             $_GET['id'] = $idOrSub;
         } elseif (is_numeric($idOrSub)) {
             $_GET['action'] = 'get';

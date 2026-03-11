@@ -134,7 +134,7 @@ const assurances = [
 ]
 
 const openBooking = () => bookingModal.value.show()
-const onBooked = () => alert('Booking confirmed! Check your email for details.')
+const onBooked = () => alert('Booking submitted. We will notify you after approval.')
 </script>
 
 <style scoped>

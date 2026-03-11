@@ -9,7 +9,8 @@ require_once __DIR__ . '/../config/database.php';
  *   GET    action=list              - list all bookings (optionally ?email= to filter by user)
  *   GET    action=get&id=           - get a single booking by id
  *   POST   action=create            - create a new booking  (JSON body)
- *   PUT    action=cancel&id=        - cancel a booking
+ *   PUT    action=cancel&id=        - cancel a booking (customer)
+ *   PUT    action=status&id=        - update booking status (management / admin)
  */
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -31,6 +32,8 @@ switch ($method) {
     case 'PUT':
         if ($action === 'cancel') {
             cancelBooking((int) ($_GET['id'] ?? 0));
+        } elseif ($action === 'status') {
+            updateBookingStatus((int) ($_GET['id'] ?? 0));
         } else {
             http_response_code(400);
             echo json_encode(['error' => 'Unknown action']);
@@ -99,7 +102,7 @@ function createBooking(): void
     }
 
     // Required fields validation
-    $required = ['costumeId', 'costumeName', 'customerName', 'email', 'phone', 'startDate', 'endDate', 'size', 'totalPrice'];
+    $required = ['costumeId', 'costumeName', 'customerName', 'email', 'phone', 'startDate', 'endDate', 'size'];
     foreach ($required as $field) {
         if (empty($body[$field])) {
             http_response_code(422);
@@ -121,10 +124,10 @@ function createBooking(): void
     $stmt = $db->prepare(
         'INSERT INTO bookings
             (costume_id, costume_name, costume_image, customer_name, email, phone,
-             start_date, end_date, size, total_price, status, booking_date)
+             start_date, end_date, size, status, booking_date)
          VALUES
             (:costume_id, :costume_name, :costume_image, :customer_name, :email, :phone,
-             :start_date, :end_date, :size, :total_price, "pending", CURDATE())'
+             :start_date, :end_date, :size, "waiting_approval", CURDATE())'
     );
 
     $stmt->execute([
@@ -137,7 +140,6 @@ function createBooking(): void
         ':start_date' => $body['startDate'],
         ':end_date' => $body['endDate'],
         ':size' => $body['size'],
-        ':total_price' => (float) $body['totalPrice'],
     ]);
 
     $newId = (int) $db->lastInsertId();
@@ -174,11 +176,87 @@ function cancelBooking(int $id): void
         return;
     }
 
+    if ($existing['status'] === 'completed') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Completed bookings cannot be cancelled']);
+        return;
+    }
+
     $db->prepare('UPDATE bookings SET status = "cancelled" WHERE id = :id')
         ->execute([':id' => $id]);
 
     $stmt->execute([':id' => $id]);
     echo json_encode(['data' => formatBooking($stmt->fetch())]);
+}
+
+function updateBookingStatus(int $id): void
+{
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid id']);
+        return;
+    }
+
+    $body = json_decode(file_get_contents('php://input'), true) ?: [];
+    $newStatus = $body['status'] ?? '';
+
+    $validStatuses = ['waiting_approval', 'processing', 'completed', 'cancelled'];
+    if (!in_array($newStatus, $validStatuses, true)) {
+        http_response_code(422);
+        echo json_encode(['error' => 'Invalid status value']);
+        return;
+    }
+
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM bookings WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $existing = $stmt->fetch();
+
+    if (!$existing) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Booking not found']);
+        return;
+    }
+
+    // Enforce allowed transitions
+    $transitions = [
+        'waiting_approval' => ['processing', 'cancelled'],
+        'processing' => ['completed', 'cancelled'],
+        'completed' => [],
+        'cancelled' => [],
+    ];
+
+    $current = $existing['status'];
+    if (!in_array($newStatus, $transitions[$current] ?? [], true)) {
+        http_response_code(422);
+        echo json_encode([
+            'error' => "Invalid transition from '{$current}' to '{$newStatus}'",
+        ]);
+        return;
+    }
+
+    // Role guard: only management/admin can move forward in the flow
+    if (in_array($newStatus, ['processing', 'completed'], true)) {
+        requireRole(['costume_management', 'admin']);
+    }
+
+    $db->prepare('UPDATE bookings SET status = :status WHERE id = :id')
+        ->execute([':status' => $newStatus, ':id' => $id]);
+
+    $stmt->execute([':id' => $id]);
+    echo json_encode(['data' => formatBooking($stmt->fetch())]);
+}
+
+function requireRole(array $allowedRoles): void
+{
+    $role = $_SERVER['HTTP_X_ROLE'] ?? '';
+    if (!$role || !in_array($role, $allowedRoles, true)) {
+        http_response_code(403);
+        echo json_encode([
+            'error' => 'Forbidden: requires role ' . implode(' or ', $allowedRoles),
+        ]);
+        exit;
+    }
 }
 
 /**
@@ -197,7 +275,6 @@ function formatBooking(array $row): array
         'startDate' => $row['start_date'],
         'endDate' => $row['end_date'],
         'size' => $row['size'],
-        'totalPrice' => (float) $row['total_price'],
         'status' => $row['status'],
         'bookingDate' => $row['booking_date'],
     ];
