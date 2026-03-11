@@ -83,9 +83,7 @@ switch ($resource) {
         break;
 
     case 'costumes':
-        if ($idOrSub === 'categories') {
-            $_GET['action'] = 'categories';
-        } elseif (is_numeric($idOrSub)) {
+        if (is_numeric($idOrSub)) {
             $_GET['action'] = 'get';
             $_GET['id'] = $idOrSub;
         } else {

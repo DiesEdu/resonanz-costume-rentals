@@ -19,9 +19,7 @@ $action = $_GET['action'] ?? '';
 
 switch ($method) {
     case 'GET':
-        if ($action === 'categories') {
-            getCategories();
-        } elseif ($action === 'get') {
+        if ($action === 'get') {
             getCostume((int) ($_GET['id'] ?? 0));
         } else {
             listCostumes();
@@ -99,15 +97,6 @@ function getCostume(int $id): void
     echo json_encode(['data' => formatCostume($row)]);
 }
 
-function getCategories(): void
-{
-    $db = getDB();
-    $stmt = $db->query('SELECT DISTINCT category FROM costumes ORDER BY category');
-    $cats = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-    echo json_encode(['data' => array_merge(['All'], $cats)]);
-}
-
 function createCostume(): void
 {
     AuthMiddleware::requireAdminOrManager();
@@ -124,6 +113,7 @@ function createCostume(): void
     $costume_code = trim($body['costume_code'] ?? '');
     $category = trim($body['category'] ?? '');
     $container = trim($body['container'] ?? '');
+    $amount = trim($body['amount'] ?? '');
     $description = trim($body['description'] ?? '');
     $available = isset($body['available']) ? (int) $body['available'] : 1;
 
@@ -166,14 +156,15 @@ function createCostume(): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, costume_code, category, container, description, image, available)
-         VALUES (:name, :costume_code, :category, :container, :description, :image, :available)'
+        'INSERT INTO costumes (name, costume_code, category, container, amount, description, image, available)
+         VALUES (:name, :costume_code, :category, :container, :amount, :description, :image, :available)'
     );
     $stmt->execute([
         ':name' => $name,
         ':costume_code' => $costume_code,
         ':category' => $category,
         ':container' => $container,
+        ':amount' => (int) $amount,
         ':description' => $description,
         ':image' => $imagePath,
         ':available' => $available,
@@ -260,6 +251,7 @@ function formatCostume(array $row): array
         'costume_code' => $row['costume_code'],
         'category' => $row['category'],
         'container' => $row['container'],
+        'amount' => (int) $row['amount'],
         'size' => $row['sizes'] ? explode(',', $row['sizes']) : [],
         'description' => $row['description'],
         'image' => $row['image'],

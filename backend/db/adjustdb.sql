@@ -20,3 +20,5 @@ CREATE TABLE IF NOT EXISTS bookings (
     FOREIGN KEY (costume_id) REFERENCES costumes(id) ON DELETE CASCADE
 );
 ALTER TABLE costumes ADD COLUMN costume_code VARCHAR(255) NOT NULL AFTER name;
+----------------------------------------------------------------------------------------
+ALTER TABLE costumes ADD COLUMN amount INT NOT NULL AFTER container;
