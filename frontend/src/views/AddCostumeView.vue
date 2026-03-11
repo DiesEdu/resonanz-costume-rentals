@@ -129,7 +129,7 @@
               <div class="form-grid">
                 <!-- Name -->
                 <div
-                  class="form-group span-2"
+                  class="form-group"
                   :class="{ 'has-error': errors.name, 'is-valid': form.name && !errors.name }"
                 >
                   <label for="name" class="form-label">
@@ -150,6 +150,38 @@
                   <transition name="err"
                     ><span v-if="errors.name" class="error-text">{{
                       errors.name
+                    }}</span></transition
+                  >
+                </div>
+
+                <!-- Costume Code -->
+                <div
+                  class="form-group"
+                  :class="{
+                    'has-error': errors.costume_code,
+                    'is-valid': form.costume_code && !errors.costume_code,
+                  }"
+                >
+                  <label for="costume_code" class="form-label">
+                    <span class="label-icon">✦</span> Costume Code <span class="required">*</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <input
+                      id="costume_code"
+                      v-model="form.costume_code"
+                      type="text"
+                      class="form-input"
+                      placeholder="e.g. KBB001"
+                      @blur="validateField('costume_code')"
+                      @input="clearError('costume_code')"
+                    />
+                    <span class="input-valid-icon" v-if="form.costume_code && !errors.costume_code"
+                      >✓</span
+                    >
+                  </div>
+                  <transition name="err"
+                    ><span v-if="errors.costume_code" class="error-text">{{
+                      errors.costume_code
                     }}</span></transition
                   >
                 </div>
@@ -573,14 +605,39 @@ function clearError(field) {
 }
 
 function validateField(field) {
-  errors.value[field] = ''
-  if (field === 'name' && !form.value.name.trim()) errors.value.name = 'Costume name is required.'
-  if (field === 'category' && !form.value.category.trim())
-    errors.value.category = 'Category is required.'
-  if (field === 'description' && form.value.description.length > 500)
-    errors.value.description = 'Description must be 500 characters or fewer.'
-  if (field === 'sizes' && form.value.sizes.length === 0)
-    errors.value.sizes = 'Select at least one size.'
+  // Clear error for this field
+  if (errors.value[field] !== undefined) {
+    errors.value[field] = ''
+  }
+
+  // Validate based on field
+  switch (field) {
+    case 'name':
+      if (!form.value.name?.trim()) errors.value.name = 'Costume name is required.'
+      break
+
+    case 'costume_code':
+      if (!form.value.costume_code?.trim()) errors.value.costume_code = 'Costume code is required.'
+      break
+
+    case 'category':
+      if (!form.value.category?.trim()) errors.value.category = 'Category is required.'
+      break
+
+    case 'container':
+      if (!form.value.container?.trim()) errors.value.container = 'Container is required.'
+      break
+
+    case 'description':
+      if (form.value.description?.length > 500)
+        errors.value.description = 'Description must be 500 characters or fewer.'
+      break
+
+    case 'sizes':
+      if (!form.value.sizes || form.value.sizes.length === 0)
+        errors.value.sizes = 'Select at least one size.'
+      break
+  }
 }
 
 function validateStep(step) {
@@ -644,6 +701,7 @@ async function handleSubmit() {
   try {
     const baseFields = {
       name: form.value.name.trim(),
+      costume_code: form.value.costume_code.trim(),
       category: form.value.category.trim(),
       description: form.value.description.trim(),
       available: form.value.available ? 1 : 0,
@@ -655,6 +713,7 @@ async function handleSubmit() {
         ? (() => {
             const fd = new FormData()
             fd.append('name', baseFields.name)
+            fd.append('costume_code', baseFields.costume_code)
             fd.append('category', baseFields.category)
             fd.append('description', baseFields.description)
             fd.append('available', String(baseFields.available))
@@ -671,6 +730,7 @@ async function handleSubmit() {
     successMessage.value = `"${created.name}" has been added to the collection!`
     form.value = {
       name: '',
+      costume_code: '',
       category: '',
       description: '',
       image: '',

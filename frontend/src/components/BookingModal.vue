@@ -1,74 +1,108 @@
 <template>
-  <div class="modal fade" id="bookingModal" tabindex="-1" ref="modalRef">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content border-0 shadow">
-        <div class="modal-header bg-primary text-white border-0">
-          <h5 class="modal-title fw-bold"><i class="bi bi-calendar-check me-2"></i>Book Costume</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  <div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100">
+      <div
+        ref="toastRef"
+        class="toast align-items-center text-white border-0 shadow-lg"
+        :class="`bg-${toastVariant}`"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <div class="d-flex">
+          <div class="toast-body d-flex align-items-center gap-2">
+            <i :class="`bi ${toastIcon} fs-5`"></i>
+            <span>{{ toastMessage }}</span>
+          </div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+          ></button>
         </div>
-        <div class="modal-body p-4">
-          <div v-if="costume" class="row">
-            <div class="col-md-5 mb-3 mb-md-0">
-              <img :src="costume.image" class="img-fluid rounded-3 shadow-sm" :alt="costume.name" />
-              <h5 class="mt-3 fw-bold">{{ costume.name }}</h5>
-            </div>
-            <div class="col-md-7">
-              <form @submit.prevent="submitBooking">
-                <div class="mb-3">
-                  <label class="form-label fw-bold">Select Size</label>
-                  <div class="d-flex gap-2 flex-wrap">
-                    <button
-                      v-for="size in costume.size"
-                      :key="size"
-                      type="button"
-                      class="btn"
-                      :class="selectedSize === size ? 'btn-primary' : 'btn-outline-secondary'"
-                      @click="selectedSize = size"
-                    >
-                      {{ size }}
-                    </button>
-                  </div>
-                </div>
+      </div>
+    </div>
 
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">Start Date</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      v-model="startDate"
-                      :min="minDate"
-                      required
-                    />
+    <div class="modal fade" id="bookingModal" tabindex="-1" ref="modalRef">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-primary text-white border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-calendar-check me-2"></i>Book Costume
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body p-4">
+            <div v-if="costume" class="row">
+              <div class="col-md-5 mb-3 mb-md-0">
+                <img
+                  :src="costume.image"
+                  class="img-fluid rounded-3 shadow-sm"
+                  :alt="costume.name"
+                />
+                <h5 class="mt-3 fw-bold">{{ costume.name }}</h5>
+              </div>
+              <div class="col-md-7">
+                <form @submit.prevent="submitBooking">
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Select Size</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                      <button
+                        v-for="size in costume.size"
+                        :key="size"
+                        type="button"
+                        class="btn"
+                        :class="selectedSize === size ? 'btn-primary' : 'btn-outline-secondary'"
+                        @click="selectedSize = size"
+                      >
+                        {{ size }}
+                      </button>
+                    </div>
                   </div>
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">End Date</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      v-model="endDate"
-                      :min="startDate || minDate"
-                      required
-                    />
+
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label fw-bold">Start Date</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        v-model="startDate"
+                        :min="minDate"
+                        required
+                      />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label fw-bold">End Date</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        v-model="endDate"
+                        :min="startDate || minDate"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div
-                  v-if="totalDays > 0"
-                  class="alert alert-info d-flex justify-content-between align-items-center"
-                >
-                  <span>Total for {{ totalDays }} days:</span>
-                  <span class="fw-bold fs-5">${{ totalPrice }}</span>
-                </div>
+                  <div
+                    v-if="totalDays > 0"
+                    class="alert alert-info d-flex justify-content-between align-items-center"
+                  >
+                    <span>For {{ totalDays }} days</span>
+                  </div>
 
-                <button
-                  type="submit"
-                  class="btn btn-primary w-100 btn-lg rounded-pill"
-                  :disabled="!isValid"
-                >
-                  <i class="bi bi-check-circle me-2"></i>Confirm Booking
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-100 btn-lg rounded-pill"
+                    :disabled="!isValid"
+                  >
+                    <i class="bi bi-check-circle me-2"></i>Confirm Booking
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -78,8 +112,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { Modal } from 'bootstrap'
+import { ref, computed, watch, nextTick } from 'vue'
+import { Modal, Toast } from 'bootstrap'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -98,6 +132,12 @@ const authStore = useAuthStore()
 const router = useRouter()
 const modalRef = ref(null)
 let modalInstance = null
+
+const toastRef = ref(null)
+let toastInstance = null
+const toastMessage = ref('')
+const toastVariant = ref('primary')
+const toastIcon = ref('bi-info-circle')
 
 const selectedSize = ref('')
 const startDate = ref('')
@@ -143,8 +183,8 @@ const hide = () => {
 
 const submitBooking = () => {
   if (!authStore.isLoggedIn) {
-    alert('Please sign in to place a booking.')
-    router.push('/login')
+    showToast('Please sign in to continue your booking.', 'warning', 'bi-person-exclamation')
+    setTimeout(() => router.push('/login'), 800)
     return
   }
 
@@ -158,12 +198,27 @@ const submitBooking = () => {
   }
 
   bookingsStore.addBooking(booking)
+  showToast('Booking confirmed! We reserved this costume for you.', 'success', 'bi-check2-circle')
+
   hide()
   emit('booked')
 
   // Reset form
   startDate.value = ''
   endDate.value = ''
+}
+
+const showToast = (message, variant = 'primary', icon = 'bi-info-circle') => {
+  toastMessage.value = message
+  toastVariant.value = variant
+  toastIcon.value = icon
+
+  nextTick(() => {
+    if (!toastInstance && toastRef.value) {
+      toastInstance = new Toast(toastRef.value, { delay: 2400 })
+    }
+    toastInstance?.show()
+  })
 }
 
 defineExpose({ show, hide })

@@ -20,6 +20,7 @@ USE costume_rental;
 CREATE TABLE IF NOT EXISTS costumes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    costume_code VARCHAR(255) NOT NULL,
     category ENUM('TRMS', 'JCO', 'BMS', 'TRCC', 'ARMONIA') NOT NULL,
     container VARCHAR(255) NOT NULL,
     description TEXT,

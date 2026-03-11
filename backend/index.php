@@ -96,7 +96,9 @@ switch ($resource) {
         break;
 
     case 'bookings':
-        if (is_numeric($idOrSub) && $subAction === 'cancel') {
+        if ($idOrSub === 'list-admin') {
+            $_GET['action'] = 'list-admin';
+        } elseif (is_numeric($idOrSub) && $subAction === 'cancel') {
             $_GET['action'] = 'cancel';
             $_GET['id'] = $idOrSub;
         } elseif (is_numeric($idOrSub) && $subAction === 'status') {

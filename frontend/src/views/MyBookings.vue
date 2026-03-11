@@ -29,7 +29,13 @@
                 <img
                   :src="booking.costumeImage"
                   :alt="booking.costumeName"
-                  style="width: 90px; height: 90px; object-fit: cover; display: block"
+                  style="
+                    width: 90px;
+                    height: 90px;
+                    object-fit: cover;
+                    display: block;
+                    border-radius: 10px;
+                  "
                 />
               </div>
             </div>
@@ -62,7 +68,7 @@
                 {{ formatStatus(booking.status) }}
               </span>
               <div v-if="['waiting_approval', 'processing'].includes(booking.status)">
-                <button class="btn btn-outline-danger btn-sm" @click="cancelBooking(booking.id)">
+                <button class="btn btn-outline-danger btn-sm" @click="openCancelModal(booking.id)">
                   <i class="bi bi-x-circle me-1"></i>Cancel
                 </button>
               </div>
@@ -83,17 +89,37 @@
         </router-link>
       </div>
     </div>
+
+    <!-- Cancel confirmation modal -->
+    <div v-if="cancelModal.open" class="modal-backdrop show" @click.self="closeCancelModal">
+      <div class="modal-card show">
+        <div class="modal-header">
+          <h5 class="fw-bold mb-0">Cancel Booking</h5>
+          <button class="btn btn-link text-muted p-0" @click="closeCancelModal">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <p class="text-muted mb-3">
+          Are you sure you want to cancel this booking? This action cannot be undone.
+        </p>
+        <div class="d-flex justify-content-end gap-2">
+          <button class="btn btn-outline-secondary btn-sm" @click="closeCancelModal">Keep Booking</button>
+          <button class="btn btn-danger btn-sm" @click="confirmCancel">Cancel Booking</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
 
 const bookingsStore = useBookingsStore()
 const authStore = useAuthStore()
 const bookings = computed(() => bookingsStore.getUserBookings())
+const cancelModal = reactive({ open: false, bookingId: null })
 
 const formatDate = (dateString) =>
   new Date(dateString).toLocaleDateString('en-US', {
@@ -109,10 +135,20 @@ const formatStatus = (status) =>
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(' ')
 
-const cancelBooking = async (id) => {
-  if (confirm('Are you sure you want to cancel this booking?')) {
-    await bookingsStore.cancelBooking(id)
-  }
+const openCancelModal = (id) => {
+  cancelModal.open = true
+  cancelModal.bookingId = id
+}
+
+const closeCancelModal = () => {
+  cancelModal.open = false
+  cancelModal.bookingId = null
+}
+
+const confirmCancel = async () => {
+  if (!cancelModal.bookingId) return
+  await bookingsStore.cancelBooking(cancelModal.bookingId)
+  closeCancelModal()
 }
 
 onMounted(async () => {
@@ -149,5 +185,60 @@ onMounted(async () => {
 .booking-img-wrap {
   border: 1px solid rgba(201, 168, 76, 0.25);
   overflow: hidden;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 1050;
+  opacity: 0;
+  animation: fadeIn 250ms ease forwards;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  transform: translateY(12px) scale(0.96);
+  opacity: 0;
+  animation: floatUp 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(12px) scale(0.96);
+    opacity: 0;
+  }
+  65% {
+    transform: translateY(-6px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 </style>

@@ -116,9 +116,11 @@ import CostumeCard from '@/components/CostumeCard.vue'
 import CategoryFilter from '@/components/CategoryFilter.vue'
 import BookingModal from '@/components/BookingModal.vue'
 import { useCostumesStore } from '@/stores/costumes'
+import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
 
 const costumesStore = useCostumesStore()
+const bookingsStore = useBookingsStore()
 const authStore = useAuthStore()
 const bookingModal = ref(null)
 const selectedCostume = ref(null)
@@ -126,13 +128,11 @@ const selectedCategory = ref('All')
 const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = 8
-const canAddCostume = computed(() =>
-  ['costume_management', 'admin'].includes(authStore.role),
-)
+const canAddCostume = computed(() => ['costume_management', 'admin'].includes(authStore.role))
 
 // Fetch costumes & categories from API
 onMounted(async () => {
-  await Promise.all([costumesStore.fetchCostumes(), costumesStore.fetchCategories()])
+  await costumesStore.fetchCostumes()
 })
 
 const filteredCostumes = computed(() => {
@@ -153,9 +153,7 @@ const filteredCostumes = computed(() => {
 })
 
 const totalPages = computed(() =>
-  filteredCostumes.value.length === 0
-    ? 1
-    : Math.ceil(filteredCostumes.value.length / pageSize),
+  filteredCostumes.value.length === 0 ? 1 : Math.ceil(filteredCostumes.value.length / pageSize),
 )
 
 const paginatedCostumes = computed(() => {
@@ -177,7 +175,7 @@ const openBooking = (costume) => {
   selectedCostume.value = costume
   bookingModal.value.show()
 }
-const onBooked = () => alert('Booking submitted. We will notify you after approval.')
+const onBooked = () => bookingsStore.showBookingToast()
 
 // Animate elements with the "reveal" helper, including ones rendered after data loads
 let revealObserver

@@ -75,7 +75,6 @@
                     <div>
                       <div class="fw-semibold">{{ booking.costumeName }}</div>
                       <div class="small">Size {{ booking.size }}</div>
-                      <div class="small">{{ formatCurrency(booking.totalPrice) }}</div>
                     </div>
                   </div>
                 </td>
@@ -150,10 +149,10 @@ const statusFilter = ref('all')
 const isActing = ref(false)
 const actingRole = computed(() => authStore.role || 'costume_management')
 
-const refresh = () => bookingsStore.fetchBookings()
+const refresh = () => bookingsStore.fetchBookingsManager()
 
 const filteredBookings = computed(() => {
-  const list = bookingsStore.bookings
+  const list = bookingsStore.manageBookings
   if (statusFilter.value === 'all') return list
   return list.filter((b) => b.status === statusFilter.value)
 })
@@ -164,13 +163,6 @@ const formatDate = (dateString) =>
     day: 'numeric',
     year: 'numeric',
   })
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-  }).format(Number(value || 0))
 
 const formatStatus = (status) =>
   status
@@ -205,7 +197,7 @@ onMounted(async () => {
     router.replace('/')
     return
   }
-  await bookingsStore.fetchBookings()
+  await bookingsStore.fetchBookingsManager()
 })
 
 const statCards = computed(() => [
@@ -376,6 +368,7 @@ function filteredCount(status) {
   width: 64px;
   height: 64px;
   border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 10px;
   overflow: hidden;
 }
 .thumb {

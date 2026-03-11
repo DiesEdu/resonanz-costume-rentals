@@ -83,3 +83,7 @@ function getDB(): PDO
 
     return $pdo;
 }
+
+// JWT Secret Key
+define('JWT_SECRET_KEY', 'your-secret-key-here-change-in-production');
+define('JWT_EXPIRATION', 86400); // 24 hours

@@ -160,8 +160,10 @@ import Hero from '@/components/Hero.vue'
 import CostumeCard from '@/components/CostumeCard.vue'
 import BookingModal from '@/components/BookingModal.vue'
 import { useCostumesStore } from '@/stores/costumes'
+import { useBookingsStore } from '@/stores/bookings'
 
 const costumesStore = useCostumesStore()
+const bookingsStore = useBookingsStore()
 const bookingModal = ref(null)
 const selectedCostume = ref(null)
 
@@ -230,7 +232,7 @@ const openBooking = (costume) => {
   selectedCostume.value = costume
   bookingModal.value.show()
 }
-const onBooked = () => alert('Booking submitted. We will notify you after approval.')
+const onBooked = () => bookingsStore.showBookingToast()
 
 // Scroll-reveal observer
 onMounted(() => {

@@ -1,6 +1,9 @@
 <?php
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../middleware/AuthMiddleware.php';
+
+use SheetMusic\Middleware\AuthMiddleware;
 
 /**
  * Costumes API
@@ -107,6 +110,8 @@ function getCategories(): void
 
 function createCostume(): void
 {
+    AuthMiddleware::requireAdminOrManager();
+
     $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
     $isMultipart = str_contains($contentType, 'multipart/form-data');
 
@@ -116,6 +121,7 @@ function createCostume(): void
     }
 
     $name = trim($body['name'] ?? '');
+    $costume_code = trim($body['costume_code'] ?? '');
     $category = trim($body['category'] ?? '');
     $container = trim($body['container'] ?? '');
     $description = trim($body['description'] ?? '');
@@ -160,11 +166,12 @@ function createCostume(): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, category, container, description, image, available)
-         VALUES (:name, :category, :container, :description, :image, :available)'
+        'INSERT INTO costumes (name, costume_code, category, container, description, image, available)
+         VALUES (:name, :costume_code, :category, :container, :description, :image, :available)'
     );
     $stmt->execute([
         ':name' => $name,
+        ':costume_code' => $costume_code,
         ':category' => $category,
         ':container' => $container,
         ':description' => $description,
@@ -250,6 +257,7 @@ function formatCostume(array $row): array
     return [
         'id' => (int) $row['id'],
         'name' => $row['name'],
+        'costume_code' => $row['costume_code'],
         'category' => $row['category'],
         'container' => $row['container'],
         'size' => $row['sizes'] ? explode(',', $row['sizes']) : [],

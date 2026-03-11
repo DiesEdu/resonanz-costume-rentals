@@ -1,6 +1,9 @@
 <?php
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../middleware/AuthMiddleware.php';
+
+use SheetMusic\Middleware\AuthMiddleware;
 
 /**
  * Bookings API
@@ -20,6 +23,8 @@ switch ($method) {
     case 'GET':
         if ($action === 'get') {
             getBooking((int) ($_GET['id'] ?? 0));
+        } elseif ($action === 'list-admin') {
+            listBookingsForManager();
         } else {
             listBookings();
         }
@@ -50,24 +55,51 @@ switch ($method) {
 
 function listBookings(): void
 {
+    $user = AuthMiddleware::authenticate();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized']);
+        return;
+    }
     $db = getDB();
-    $email = $_GET['email'] ?? '';
-    $customerId = isset($_GET['customerId']) ? (int) $_GET['customerId'] : 0;
+    $customerId = $user['id'] ?? 0;
 
-    $sql = 'SELECT * FROM bookings WHERE 1=1';
+    $sql = 'SELECT b.*, c.image AS costume_image
+            FROM bookings b
+            LEFT JOIN costumes c ON c.id = b.costume_id
+            WHERE 1=1';
     $params = [];
 
-    if ($email) {
-        $sql .= ' AND email = :email';
-        $params[':email'] = $email;
-    }
-
     if ($customerId > 0) {
-        $sql .= ' AND customer_id = :customer_id';
+        $sql .= ' AND b.customer_id = :customer_id';
         $params[':customer_id'] = $customerId;
     }
 
-    $sql .= ' ORDER BY booking_date DESC, id DESC';
+    $sql .= ' ORDER BY b.booking_date DESC, b.id DESC';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    echo json_encode(['data' => array_map('formatBooking', $stmt->fetchAll())]);
+}
+
+function listBookingsForManager(): void
+{
+    $user = AuthMiddleware::authenticate();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Unauthorized']);
+        return;
+    }
+    $db = getDB();
+
+    $sql = 'SELECT b.*, c.image AS costume_image
+            FROM bookings b
+            LEFT JOIN costumes c ON c.id = b.costume_id
+            WHERE 1=1';
+    $params = [];
+
+    $sql .= ' ORDER BY b.booking_date DESC, b.id DESC';
 
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
@@ -84,7 +116,12 @@ function getBooking(int $id): void
     }
 
     $db = getDB();
-    $stmt = $db->prepare('SELECT * FROM bookings WHERE id = :id');
+    $stmt = $db->prepare(
+        'SELECT b.*, c.image AS costume_image
+         FROM bookings b
+         LEFT JOIN costumes c ON c.id = b.costume_id
+         WHERE b.id = :id'
+    );
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
 
@@ -99,6 +136,8 @@ function getBooking(int $id): void
 
 function createBooking(): void
 {
+    $user = AuthMiddleware::authenticate();
+
     $body = json_decode(file_get_contents('php://input'), true);
 
     if (!$body) {
@@ -129,7 +168,7 @@ function createBooking(): void
     $db = getDB();
 
     // Ensure customer exists before proceeding
-    $customerId = (int) $body['customerId'];
+    $customerId = (int) ($user['id'] ?? $body['customerId']);
     $customerStmt = $db->prepare('SELECT id FROM users WHERE id = :id');
     $customerStmt->execute([':id' => $customerId]);
     if (!$customerStmt->fetchColumn()) {
@@ -147,7 +186,7 @@ function createBooking(): void
 
     $stmt->execute([
         ':costume_id' => (int) $body['costumeId'],
-        ':customer_id' => (int) $body['customerId'],
+        ':customer_id' => $customerId,
         ':start_date' => $body['startDate'],
         ':end_date' => $body['endDate'],
         ':size' => $body['size'],
@@ -155,7 +194,12 @@ function createBooking(): void
 
     $newId = (int) $db->lastInsertId();
 
-    $stmt2 = $db->prepare('SELECT * FROM bookings WHERE id = :id');
+    $stmt2 = $db->prepare(
+        'SELECT b.*, c.image AS costume_image
+         FROM bookings b
+         LEFT JOIN costumes c ON c.id = b.costume_id
+         WHERE b.id = :id'
+    );
     $stmt2->execute([':id' => $newId]);
 
     http_response_code(201);
@@ -164,6 +208,8 @@ function createBooking(): void
 
 function cancelBooking(int $id): void
 {
+    $user = AuthMiddleware::authenticate();
+
     if ($id <= 0) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid id']);
@@ -171,7 +217,12 @@ function cancelBooking(int $id): void
     }
 
     $db = getDB();
-    $stmt = $db->prepare('SELECT * FROM bookings WHERE id = :id');
+    $stmt = $db->prepare(
+        'SELECT b.*, c.image AS costume_image
+         FROM bookings b
+         LEFT JOIN costumes c ON c.id = b.costume_id
+         WHERE b.id = :id'
+    );
     $stmt->execute([':id' => $id]);
     $existing = $stmt->fetch();
 
@@ -193,6 +244,12 @@ function cancelBooking(int $id): void
         return;
     }
 
+    if ((int) $existing['customer_id'] !== (int) ($user['id'] ?? 0)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'You can only cancel your own bookings']);
+        return;
+    }
+
     $db->prepare('UPDATE bookings SET status = "cancelled" WHERE id = :id')
         ->execute([':id' => $id]);
 
@@ -202,6 +259,8 @@ function cancelBooking(int $id): void
 
 function updateBookingStatus(int $id): void
 {
+    AuthMiddleware::requireAdminOrManager();
+
     if ($id <= 0) {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid id']);
@@ -219,7 +278,12 @@ function updateBookingStatus(int $id): void
     }
 
     $db = getDB();
-    $stmt = $db->prepare('SELECT * FROM bookings WHERE id = :id');
+    $stmt = $db->prepare(
+        'SELECT b.*, c.image AS costume_image
+         FROM bookings b
+         LEFT JOIN costumes c ON c.id = b.costume_id
+         WHERE b.id = :id'
+    );
     $stmt->execute([':id' => $id]);
     $existing = $stmt->fetch();
 
@@ -246,28 +310,11 @@ function updateBookingStatus(int $id): void
         return;
     }
 
-    // Role guard: only management/admin can move forward in the flow
-    if (in_array($newStatus, ['processing', 'completed'], true)) {
-        requireRole(['costume_management', 'admin']);
-    }
-
     $db->prepare('UPDATE bookings SET status = :status WHERE id = :id')
         ->execute([':status' => $newStatus, ':id' => $id]);
 
     $stmt->execute([':id' => $id]);
     echo json_encode(['data' => formatBooking($stmt->fetch())]);
-}
-
-function requireRole(array $allowedRoles): void
-{
-    $role = $_SERVER['HTTP_X_ROLE'] ?? '';
-    if (!$role || !in_array($role, $allowedRoles, true)) {
-        http_response_code(403);
-        echo json_encode([
-            'error' => 'Forbidden: requires role ' . implode(' or ', $allowedRoles),
-        ]);
-        exit;
-    }
 }
 
 /**
@@ -284,5 +331,6 @@ function formatBooking(array $row): array
         'size' => $row['size'],
         'status' => $row['status'],
         'bookingDate' => $row['booking_date'],
+        'costumeImage' => $row['costume_image'] ?? null,
     ];
 }

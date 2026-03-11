@@ -48,6 +48,8 @@
             {{ costume.name }}
           </h1>
 
+          <h3 class="fst-italic">{{ costume.costume_code }}</h3>
+
           <div class="d-flex align-items-center gap-3 mb-4">
             <div class="text-warning">
               <i v-for="n in 4" :key="n" class="bi bi-star-fill"></i>
@@ -116,9 +118,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import BookingModal from '@/components/BookingModal.vue'
 import { useCostumesStore } from '@/stores/costumes'
+import { useBookingsStore } from '@/stores/bookings'
 
 const route = useRoute()
 const costumesStore = useCostumesStore()
+const bookingsStore = useBookingsStore()
 const bookingModal = ref(null)
 const costume = ref(null)
 
@@ -134,7 +138,7 @@ const assurances = [
 ]
 
 const openBooking = () => bookingModal.value.show()
-const onBooked = () => alert('Booking submitted. We will notify you after approval.')
+const onBooked = () => bookingsStore.showBookingToast()
 </script>
 
 <style scoped>
