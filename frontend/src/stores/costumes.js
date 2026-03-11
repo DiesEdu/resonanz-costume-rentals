@@ -78,10 +78,11 @@ export const useCostumesStore = defineStore('costumes', () => {
     loading.value = true
     error.value = null
     try {
+      const isFormData = typeof FormData !== 'undefined' && costumeData instanceof FormData
       const res = await fetch(`${API_BASE}/api/costumes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(costumeData),
+        headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+        body: isFormData ? costumeData : JSON.stringify(costumeData),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)

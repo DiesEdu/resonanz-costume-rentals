@@ -107,15 +107,50 @@ function getCategories(): void
 
 function createCostume(): void
 {
-    $body = json_decode(file_get_contents('php://input'), true);
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    $isMultipart = str_contains($contentType, 'multipart/form-data');
+
+    $body = $isMultipart ? $_POST : json_decode(file_get_contents('php://input'), true);
+    if (!is_array($body)) {
+        $body = [];
+    }
 
     $name = trim($body['name'] ?? '');
     $category = trim($body['category'] ?? '');
     $container = trim($body['container'] ?? '');
     $description = trim($body['description'] ?? '');
-    $image = trim($body['image'] ?? '');
     $available = isset($body['available']) ? (int) $body['available'] : 1;
+
     $sizes = $body['sizes'] ?? [];
+    if ($isMultipart && isset($_POST['sizes'])) {
+        if (is_array($_POST['sizes'])) {
+            $sizes = $_POST['sizes'];
+        } elseif (is_string($_POST['sizes'])) {
+            $decoded = json_decode($_POST['sizes'], true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $sizes = $decoded;
+            }
+        }
+    } elseif (is_string($sizes)) {
+        $decoded = json_decode($sizes, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $sizes = $decoded;
+        }
+    }
+    if (!is_array($sizes)) {
+        $sizes = [];
+    }
+
+    $imagePath = trim($body['image'] ?? '');
+    if ($isMultipart && isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $upload = handleImageUpload($_FILES['image']);
+        if (!$upload['ok']) {
+            http_response_code(400);
+            echo json_encode(['error' => $upload['error']]);
+            return;
+        }
+        $imagePath = $upload['path'];
+    }
 
     if (!$name || !$category) {
         http_response_code(400);
@@ -131,9 +166,9 @@ function createCostume(): void
     $stmt->execute([
         ':name' => $name,
         ':category' => $category,
-        ':container' => $body['container'] ?? '',
+        ':container' => $container,
         ':description' => $description,
-        ':image' => $image,
+        ':image' => $imagePath,
         ':available' => $available,
     ]);
 
@@ -151,6 +186,63 @@ function createCostume(): void
 
     // Return the newly created costume
     getCostume($costumeId);
+}
+
+/**
+ * Handle image upload and return public path.
+ */
+function handleImageUpload(array $file): array
+{
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'Upload failed. Please try again.'];
+    }
+
+    if ($file['size'] > 5 * 1024 * 1024) {
+        return ['ok' => false, 'error' => 'Image must be 5MB or smaller.'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = $finfo ? finfo_file($finfo, $file['tmp_name']) : mime_content_type($file['tmp_name']);
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+    ];
+
+    if (!isset($allowed[$mime])) {
+        return ['ok' => false, 'error' => 'Only JPG, PNG, or WebP images are allowed.'];
+    }
+
+    $uploadDir = __DIR__ . '/../upload/img';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
+        return ['ok' => false, 'error' => 'Unable to create upload directory.'];
+    }
+
+    $filename = uniqid('costume_', true) . '.' . $allowed[$mime];
+    $targetPath = $uploadDir . '/' . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        return ['ok' => false, 'error' => 'Failed to save uploaded file.'];
+    }
+
+    $relative = 'upload/img/' . $filename;
+    return ['ok' => true, 'path' => buildPublicPath($relative)];
+}
+
+/**
+ * Build absolute public URL for stored assets.
+ */
+function buildPublicPath(string $relative): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+
+    return sprintf('%s://%s%s/%s', $scheme, $host, $base, ltrim($relative, '/'));
 }
 
 /**

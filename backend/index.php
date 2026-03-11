@@ -15,9 +15,12 @@
  *   GET    /api/costumes/{id}          – get single costume
  *   GET    /api/bookings               – list bookings (?email=)
  *   GET    /api/bookings/{id}          – get single booking
- *   POST   /api/bookings               – create booking (JSON)
+ *   POST   /api/bookings               – create booking (JSON or multipart)
  *   PUT    /api/bookings/{id}/cancel   – cancel booking
  *   PUT    /api/bookings/{id}/status   – update booking status (processing/completed)
+ *
+ * Static files (uploads):
+ *   GET    /upload/img/{filename}      – served directly
  */
 
 // ── CORS headers (update origin for production) ──────────────────────────────
@@ -49,6 +52,22 @@ if (isset($_GET['url'])) {
 
 $url = trim($rawUrl, '/');
 $segments = $url ? explode('/', $url) : [];
+
+// Serve uploaded assets directly (bypass JSON routing)
+if (str_starts_with($url, 'upload/')) {
+    $filePath = __DIR__ . '/' . $url;
+    if (is_file($filePath)) {
+        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($filePath));
+        readfile($filePath);
+        exit;
+    }
+    http_response_code(404);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'File not found']);
+    exit;
+}
 
 $resource = $segments[0] ?? '';      // "costumes" | "bookings" | "auth"
 $idOrSub = $segments[1] ?? '';      // numeric id OR "categories" OR auth action
