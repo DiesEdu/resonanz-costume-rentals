@@ -8,6 +8,8 @@ export const useCostumesStore = defineStore('costumes', () => {
   const loading = ref(false)
   const error = ref(null)
 
+  const token = localStorage.getItem('auth_token')
+
   // ── Fetch all costumes (optional filters) ──────────────────────────────────
   const fetchCostumes = async ({ category = '', search = '' } = {}) => {
     loading.value = true
@@ -18,7 +20,11 @@ export const useCostumesStore = defineStore('costumes', () => {
       if (search) params.set('search', search)
 
       const qs = params.toString()
-      const res = await fetch(`${API_BASE}/api/costumes${qs ? '?' + qs : ''}`)
+      const res = await fetch(`${API_BASE}/api/costumes${qs ? '?' + qs : ''}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       costumes.value = json.data
@@ -38,7 +44,11 @@ export const useCostumesStore = defineStore('costumes', () => {
     if (cached) return cached
 
     try {
-      const res = await fetch(`${API_BASE}/api/costumes/${id}`)
+      const res = await fetch(`${API_BASE}/api/costumes/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       return json.data
@@ -71,7 +81,10 @@ export const useCostumesStore = defineStore('costumes', () => {
       const isFormData = typeof FormData !== 'undefined' && costumeData instanceof FormData
       const res = await fetch(`${API_BASE}/api/costumes`, {
         method: 'POST',
-        headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        },
         body: isFormData ? costumeData : JSON.stringify(costumeData),
       })
       const json = await res.json()
