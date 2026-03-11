@@ -82,10 +82,32 @@
                         class="form-control"
                         v-model="endDate"
                         :min="startDate || minDate"
+                    required
+                  />
+                </div>
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Amount</label>
+                    <div class="input-group">
+                      <input
+                        type="number"
+                        class="form-control"
+                        v-model.number="amount"
+                        :min="1"
+                        :max="availableAmount"
+                        :disabled="availableAmount === 0"
                         required
                       />
+                      <span class="input-group-text bg-light">
+                        Remainder: {{ remainingAmount }}
+                      </span>
                     </div>
+                    <small class="text-muted">
+                      Max {{ availableAmount }} available
+                    </small>
                   </div>
+                </div>
+              </div>
 
                   <div
                     v-if="totalDays > 0"
@@ -142,6 +164,7 @@ const toastIcon = ref('bi-info-circle')
 const selectedSize = ref('')
 const startDate = ref('')
 const endDate = ref('')
+const amount = ref(1)
 
 const minDate = new Date().toISOString().split('T')[0]
 
@@ -153,12 +176,21 @@ const totalDays = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const totalPrice = computed(() => {
-  return totalDays.value * (props.costume?.price || 0)
-})
+const availableAmount = computed(() => Number(props.costume?.amount ?? 0))
+const remainingAmount = computed(() =>
+  Math.max(availableAmount.value - Number(amount.value || 0), 0),
+)
 
 const isValid = computed(() => {
-  return selectedSize.value && startDate.value && endDate.value && totalDays.value > 0
+  return (
+    selectedSize.value &&
+    startDate.value &&
+    endDate.value &&
+    totalDays.value > 0 &&
+    amount.value >= 1 &&
+    amount.value <= availableAmount.value &&
+    availableAmount.value > 0
+  )
 })
 
 watch(
@@ -166,9 +198,16 @@ watch(
   (newCostume) => {
     if (newCostume) {
       selectedSize.value = newCostume.size[0]
+      amount.value = 1
     }
   },
 )
+
+watch(amount, (val) => {
+  const numeric = Number(val || 0)
+  if (numeric < 1) amount.value = 1
+  if (numeric > availableAmount.value) amount.value = availableAmount.value
+})
 
 const show = () => {
   if (!modalInstance) {
@@ -194,7 +233,7 @@ const submitBooking = () => {
     startDate: startDate.value,
     endDate: endDate.value,
     size: selectedSize.value,
-    totalPrice: totalPrice.value,
+    amount: amount.value,
   }
 
   bookingsStore.addBooking(booking)

@@ -129,7 +129,7 @@
               <div class="form-grid">
                 <!-- Name -->
                 <div
-                  class="form-group"
+                  class="form-group span-2"
                   :class="{ 'has-error': errors.name, 'is-valid': form.name && !errors.name }"
                 >
                   <label for="name" class="form-label">
@@ -182,6 +182,36 @@
                   <transition name="err"
                     ><span v-if="errors.costume_code" class="error-text">{{
                       errors.costume_code
+                    }}</span></transition
+                  >
+                </div>
+
+                <!-- Amount -->
+                <div
+                  class="form-group"
+                  :class="{
+                    'has-error': errors.amount,
+                    'is-valid': form.amount && !errors.amount,
+                  }"
+                >
+                  <label for="amount" class="form-label">
+                    <span class="label-icon">✦</span> Amount <span class="required">*</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <input
+                      id="amount"
+                      v-model="form.amount"
+                      type="number"
+                      class="form-input"
+                      placeholder="e.g. KBB001"
+                      @blur="validateField('amount')"
+                      @input="clearError('amount')"
+                    />
+                    <span class="input-valid-icon" v-if="form.amount && !errors.amount">✓</span>
+                  </div>
+                  <transition name="err"
+                    ><span v-if="errors.amount" class="error-text">{{
+                      errors.amount
                     }}</span></transition
                   >
                 </div>
@@ -545,7 +575,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCostumesStore } from '@/stores/costumes'
 
@@ -571,6 +601,7 @@ const form = ref({
   name: '',
   category: '',
   container: '',
+  amount: 0,
   description: '',
   image: '',
   available: true,
@@ -628,6 +659,10 @@ function validateField(field) {
       if (!form.value.container?.trim()) errors.value.container = 'Container is required.'
       break
 
+    case 'amount':
+      if (form.value.amount < 0) errors.value.amount = 'Amount must be a positive number.'
+      break
+
     case 'description':
       if (form.value.description?.length > 500)
         errors.value.description = 'Description must be 500 characters or fewer.'
@@ -672,7 +707,9 @@ function onImageUrlInput() {
   if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
   imagePreviewUrl.value = ''
   imageFile.value = null
-  imageInputEl.value && (imageInputEl.value.value = '')
+  if (imageInputEl.value) {
+    imageInputEl.value.value = ''
+  }
 }
 
 function onImageSelected(event) {
@@ -703,6 +740,7 @@ async function handleSubmit() {
       name: form.value.name.trim(),
       costume_code: form.value.costume_code.trim(),
       category: form.value.category.trim(),
+      amount: form.value.amount,
       description: form.value.description.trim(),
       available: form.value.available ? 1 : 0,
       sizes: form.value.sizes,
@@ -715,6 +753,7 @@ async function handleSubmit() {
             fd.append('name', baseFields.name)
             fd.append('costume_code', baseFields.costume_code)
             fd.append('category', baseFields.category)
+            fd.append('amount', baseFields.amount)
             fd.append('description', baseFields.description)
             fd.append('available', String(baseFields.available))
             fd.append('sizes', JSON.stringify(baseFields.sizes))
@@ -732,6 +771,7 @@ async function handleSubmit() {
       name: '',
       costume_code: '',
       category: '',
+      amount: 0,
       description: '',
       image: '',
       available: true,
@@ -740,7 +780,9 @@ async function handleSubmit() {
     if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
     imagePreviewUrl.value = ''
     imageFile.value = null
-    imageInputEl.value && (imageInputEl.value.value = '')
+    if (imageInputEl.value) {
+      imageInputEl.value.value = ''
+    }
     errors.value = {}
     setTimeout(() => router.push(`/costume/${created.id}`), 1800)
   } catch (err) {

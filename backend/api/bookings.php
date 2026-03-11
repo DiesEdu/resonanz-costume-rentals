@@ -147,7 +147,7 @@ function createBooking(): void
     }
 
     // Required fields validation
-    $required = ['costumeId', 'customerId', 'startDate', 'endDate', 'size'];
+    $required = ['costumeId', 'customerId', 'startDate', 'endDate', 'size', 'amount'];
     foreach ($required as $field) {
         if (empty($body[$field])) {
             http_response_code(422);
@@ -179,9 +179,9 @@ function createBooking(): void
 
     $stmt = $db->prepare(
         'INSERT INTO bookings
-            (costume_id, customer_id, start_date, end_date, size, status, booking_date)
+            (costume_id, customer_id, start_date, end_date, size, amount_book, status, booking_date)
          VALUES
-            (:costume_id, :customer_id, :start_date, :end_date, :size, "waiting_approval", CURDATE())'
+            (:costume_id, :customer_id, :start_date, :end_date, :size, :amount, "waiting_approval", CURDATE())'
     );
 
     $stmt->execute([
@@ -190,6 +190,7 @@ function createBooking(): void
         ':start_date' => $body['startDate'],
         ':end_date' => $body['endDate'],
         ':size' => $body['size'],
+        ':amount' => (int) $body['amount'],
     ]);
 
     $newId = (int) $db->lastInsertId();
@@ -329,6 +330,7 @@ function formatBooking(array $row): array
         'startDate' => $row['start_date'],
         'endDate' => $row['end_date'],
         'size' => $row['size'],
+        'amount' => (int) $row['amount_book'],
         'status' => $row['status'],
         'bookingDate' => $row['booking_date'],
         'costumeImage' => $row['costume_image'] ?? null,

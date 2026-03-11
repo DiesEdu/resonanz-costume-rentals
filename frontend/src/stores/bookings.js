@@ -76,7 +76,7 @@ export const useBookingsStore = defineStore('bookings', () => {
     try {
       const res = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(booking),
       })
       if (!res.ok) {

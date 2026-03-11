@@ -48,7 +48,12 @@
             {{ costume.name }}
           </h1>
 
-          <h3 class="fst-italic">{{ costume.costume_code }}</h3>
+          <h3>
+            <span class="fst-italic">{{ costume.costume_code }}</span>
+            <span class="text-muted ms-2" style="font-size: 0.7em">
+              - ({{ costume.amount }}) Availability</span
+            >
+          </h3>
 
           <div class="d-flex align-items-center gap-3 mb-4">
             <div class="text-warning">

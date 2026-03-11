@@ -24,7 +24,10 @@
       </div>
 
       <h5 class="card-title mb-2 fw-bold">{{ costume.name }}</h5>
-      <h5 class="fst-italic">{{ costume.costume_code }}</h5>
+      <h5>
+        <span class="fst-italic">{{ costume.costume_code }}</span>
+        <span class="text-muted ms-2" style="font-size: 0.7em"> - ({{ costume.amount }})</span>
+      </h5>
 
       <p class="card-text text-muted small flex-grow-1" style="line-height: 1.6">
         {{ truncatedDescription }}
