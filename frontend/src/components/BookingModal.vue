@@ -118,12 +118,7 @@ const totalPrice = computed(() => {
 })
 
 const isValid = computed(() => {
-  return (
-    selectedSize.value &&
-    startDate.value &&
-    endDate.value &&
-    totalDays.value > 0
-  )
+  return selectedSize.value && startDate.value && endDate.value && totalDays.value > 0
 })
 
 watch(
@@ -153,18 +148,9 @@ const submitBooking = () => {
     return
   }
 
-  const customerName = authStore.user?.name || 'Unknown'
-  const email = authStore.user?.email || ''
-  const phone = authStore.user?.phone || ''
-
   const booking = {
     costumeId: props.costume.id,
-    costumeName: props.costume.name,
-    costumeImage: props.costume.image,
-    customerName,
-    email,
-    phone,
-    userId: authStore.user?.id || null,
+    customerId: authStore.user?.id || null,
     startDate: startDate.value,
     endDate: endDate.value,
     size: selectedSize.value,

@@ -9,11 +9,14 @@ export const useBookingsStore = defineStore('bookings', () => {
   const error = ref(null)
 
   // ── Fetch bookings (optionally filter by email) ────────────────────────────
-  const fetchBookings = async (email = '') => {
+  const fetchBookings = async ({ email = '', customerId = null } = {}) => {
     loading.value = true
     error.value = null
     try {
-      const qs = email ? '?email=' + encodeURIComponent(email) : ''
+      const params = new URLSearchParams()
+      if (email) params.set('email', email)
+      if (customerId) params.set('customerId', customerId)
+      const qs = params.toString() ? `?${params.toString()}` : ''
       const res = await fetch(`${API_BASE}/api/bookings${qs}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()

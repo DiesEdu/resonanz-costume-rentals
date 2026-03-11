@@ -89,8 +89,10 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
+import { useAuthStore } from '@/stores/auth'
 
 const bookingsStore = useBookingsStore()
+const authStore = useAuthStore()
 const bookings = computed(() => bookingsStore.getUserBookings())
 
 const formatDate = (dateString) =>
@@ -114,7 +116,8 @@ const cancelBooking = async (id) => {
 }
 
 onMounted(async () => {
-  await bookingsStore.fetchBookings()
+  const userId = authStore.user?.id || null
+  await bookingsStore.fetchBookings({ customerId: userId })
 
   const obs = new IntersectionObserver(
     (entries) =>

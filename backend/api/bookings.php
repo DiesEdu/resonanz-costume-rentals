@@ -52,6 +52,7 @@ function listBookings(): void
 {
     $db = getDB();
     $email = $_GET['email'] ?? '';
+    $customerId = isset($_GET['customerId']) ? (int) $_GET['customerId'] : 0;
 
     $sql = 'SELECT * FROM bookings WHERE 1=1';
     $params = [];
@@ -59,6 +60,11 @@ function listBookings(): void
     if ($email) {
         $sql .= ' AND email = :email';
         $params[':email'] = $email;
+    }
+
+    if ($customerId > 0) {
+        $sql .= ' AND customer_id = :customer_id';
+        $params[':customer_id'] = $customerId;
     }
 
     $sql .= ' ORDER BY booking_date DESC, id DESC';
@@ -102,7 +108,7 @@ function createBooking(): void
     }
 
     // Required fields validation
-    $required = ['costumeId', 'costumeName', 'customerName', 'email', 'phone', 'startDate', 'endDate', 'size'];
+    $required = ['costumeId', 'customerId', 'startDate', 'endDate', 'size'];
     foreach ($required as $field) {
         if (empty($body[$field])) {
             http_response_code(422);
@@ -121,22 +127,27 @@ function createBooking(): void
     }
 
     $db = getDB();
+
+    // Ensure customer exists before proceeding
+    $customerId = (int) $body['customerId'];
+    $customerStmt = $db->prepare('SELECT id FROM users WHERE id = :id');
+    $customerStmt->execute([':id' => $customerId]);
+    if (!$customerStmt->fetchColumn()) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Customer not found']);
+        return;
+    }
+
     $stmt = $db->prepare(
         'INSERT INTO bookings
-            (costume_id, costume_name, costume_image, customer_name, email, phone,
-             start_date, end_date, size, status, booking_date)
+            (costume_id, customer_id, start_date, end_date, size, status, booking_date)
          VALUES
-            (:costume_id, :costume_name, :costume_image, :customer_name, :email, :phone,
-             :start_date, :end_date, :size, "waiting_approval", CURDATE())'
+            (:costume_id, :customer_id, :start_date, :end_date, :size, "waiting_approval", CURDATE())'
     );
 
     $stmt->execute([
         ':costume_id' => (int) $body['costumeId'],
-        ':costume_name' => $body['costumeName'],
-        ':costume_image' => $body['costumeImage'] ?? null,
-        ':customer_name' => $body['customerName'],
-        ':email' => $body['email'],
-        ':phone' => $body['phone'],
+        ':customer_id' => (int) $body['customerId'],
         ':start_date' => $body['startDate'],
         ':end_date' => $body['endDate'],
         ':size' => $body['size'],
@@ -267,11 +278,7 @@ function formatBooking(array $row): array
     return [
         'id' => (int) $row['id'],
         'costumeId' => (int) $row['costume_id'],
-        'costumeName' => $row['costume_name'],
-        'costumeImage' => $row['costume_image'],
-        'customerName' => $row['customer_name'],
-        'email' => $row['email'],
-        'phone' => $row['phone'],
+        'customerId' => (int) $row['customer_id'],
         'startDate' => $row['start_date'],
         'endDate' => $row['end_date'],
         'size' => $row['size'],

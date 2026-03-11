@@ -44,11 +44,7 @@ CREATE TABLE IF NOT EXISTS costume_sizes (
 CREATE TABLE IF NOT EXISTS bookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     costume_id INT NOT NULL,
-    costume_name VARCHAR(255) NOT NULL,
-    costume_image VARCHAR(500),
-    customer_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
+    costumer_id INT NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     size VARCHAR(10) NOT NULL,
@@ -90,7 +86,3 @@ INSERT INTO costume_sizes (costume_id, size) VALUES
 (10, 'S'), (10, 'M'), (10, 'L'),
 (11, 'XS'), (11, 'S'), (11, 'M'),
 (12, 'S'), (12, 'M'), (12, 'L'), (12, 'XL');
-
--- Sample booking
-INSERT INTO bookings (costume_id, costume_name, costume_image, customer_name, email, phone, start_date, end_date, size, status, booking_date) VALUES
-(2, 'Superhero Spider Suit', 'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500&auto=format&fit=crop&q=60', 'John Doe', 'john@example.com', '555-0123', '2026-03-15', '2026-03-18', 'M', 'processing', '2026-03-10');
