@@ -291,14 +291,32 @@
                     type="url"
                     class="form-input"
                     placeholder="https://example.com/costume.jpg"
+                    @input="onImageUrlInput"
                   />
                 </div>
 
+                <!-- Image file upload -->
+                <div class="file-input-group">
+                  <label class="form-label">
+                    <span class="label-icon">✦</span> Or Upload Image
+                  </label>
+                  <div class="input-wrapper">
+                    <input
+                      ref="imageInputEl"
+                      type="file"
+                      accept="image/*"
+                      class="form-input file-input"
+                      @change="onImageSelected"
+                    />
+                  </div>
+                  <p class="help-text">Choose a file to upload, or paste a URL above.</p>
+                </div>
+
                 <transition name="fade">
-                  <div v-if="form.image" class="image-preview-card">
+                  <div v-if="previewSrc" class="image-preview-card">
                     <div class="image-preview-inner">
                       <img
-                        :src="form.image"
+                        :src="previewSrc"
                         alt="Preview"
                         class="image-preview"
                         @error="imageLoadError = true"
@@ -327,7 +345,7 @@
                   </div>
                 </transition>
 
-                <div v-if="!form.image" class="image-placeholder">
+                <div v-if="!previewSrc" class="image-placeholder">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="40"
@@ -506,12 +524,16 @@ const loading = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 const imageLoadError = ref(false)
+const imageFile = ref(null)
+const imagePreviewUrl = ref('')
+const imageInputEl = ref(null)
 
 const sizeOptions = ['XS', 'S', 'M', 'L', 'XL']
 const steps = ['Basic Info', 'Sizes & Image', 'Description']
 const currentStep = ref(0)
 
 const stepProgress = computed(() => (currentStep.value / (steps.length - 1)) * 100)
+const previewSrc = computed(() => imagePreviewUrl.value || form.value.image)
 
 const form = ref({
   name: '',
@@ -526,10 +548,6 @@ const form = ref({
 const errors = ref({})
 
 const existingCategories = computed(() => costumesStore.categories.filter((c) => c !== 'All'))
-
-onMounted(() => {
-  costumesStore.fetchCategories()
-})
 
 // ── Particle helper ──────────────────────────────────────────────────────────
 function particleStyle(n) {
@@ -592,6 +610,30 @@ function goToStep(i) {
   if (i < currentStep.value) currentStep.value = i
 }
 
+function onImageUrlInput() {
+  if (!imageFile.value && !imagePreviewUrl.value) return
+  if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+  imagePreviewUrl.value = ''
+  imageFile.value = null
+  imageInputEl.value && (imageInputEl.value.value = '')
+}
+
+function onImageSelected(event) {
+  const file = event?.target?.files?.[0]
+  if (!file) {
+    if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+    imageFile.value = null
+    imagePreviewUrl.value = ''
+    return
+  }
+
+  imageFile.value = file
+  imageLoadError.value = false
+  if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+  imagePreviewUrl.value = URL.createObjectURL(file)
+  form.value.image = ''
+}
+
 // ── Submit ───────────────────────────────────────────────────────────────────
 async function handleSubmit() {
   successMessage.value = ''
@@ -600,14 +642,31 @@ async function handleSubmit() {
 
   loading.value = true
   try {
-    const payload = {
+    const baseFields = {
       name: form.value.name.trim(),
       category: form.value.category.trim(),
       description: form.value.description.trim(),
-      image: form.value.image.trim(),
       available: form.value.available ? 1 : 0,
       sizes: form.value.sizes,
     }
+
+    const payload =
+      imageFile.value && typeof FormData !== 'undefined'
+        ? (() => {
+            const fd = new FormData()
+            fd.append('name', baseFields.name)
+            fd.append('category', baseFields.category)
+            fd.append('description', baseFields.description)
+            fd.append('available', String(baseFields.available))
+            fd.append('sizes', JSON.stringify(baseFields.sizes))
+            fd.append('image', imageFile.value)
+            return fd
+          })()
+        : {
+            ...baseFields,
+            image: form.value.image.trim(),
+          }
+
     const created = await costumesStore.addCostume(payload)
     successMessage.value = `"${created.name}" has been added to the collection!`
     form.value = {
@@ -618,6 +677,10 @@ async function handleSubmit() {
       available: true,
       sizes: [],
     }
+    if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+    imagePreviewUrl.value = ''
+    imageFile.value = null
+    imageInputEl.value && (imageInputEl.value.value = '')
     errors.value = {}
     setTimeout(() => router.push(`/costume/${created.id}`), 1800)
   } catch (err) {

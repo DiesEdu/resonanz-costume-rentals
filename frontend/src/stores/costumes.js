@@ -30,17 +30,7 @@ export const useCostumesStore = defineStore('costumes', () => {
   }
 
   // ── Fetch categories ───────────────────────────────────────────────────────
-  const categories = ref(['All'])
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/costumes/categories`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
-      categories.value = json.data
-    } catch (err) {
-      console.error('Failed to fetch categories:', err)
-    }
-  }
+  const categories = ref(['All', 'BMS', 'JCO', 'TRCC', 'ARMONIA', 'TRMS'])
 
   // ── Get single costume by id (from cache or API) ──────────────────────────
   const getCostumeById = async (id) => {
@@ -102,7 +92,6 @@ export const useCostumesStore = defineStore('costumes', () => {
     loading,
     error,
     fetchCostumes,
-    fetchCategories,
     getCostumeById,
     getCostumesByCategory,
     searchCostumes,
