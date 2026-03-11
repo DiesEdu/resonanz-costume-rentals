@@ -50,7 +50,12 @@
             </router-link>
           </li>
           <li class="nav-item" v-if="isManager">
-            <router-link class="nav-link" to="/manage/bookings" active-class="active" @click="closeNav">
+            <router-link
+              class="nav-link"
+              to="/manage/bookings"
+              active-class="active"
+              @click="closeNav"
+            >
               Manage
             </router-link>
           </li>
@@ -297,19 +302,24 @@ onUnmounted(() => {
   color: #ff8a8a !important;
 }
 
-/* Smooth mobile collapse animation */
 @media (max-width: 991.98px) {
   .navbar-collapse {
     max-height: 0;
     opacity: 0;
     overflow: hidden;
     transition:
-      max-height 0.3s ease,
-      opacity 0.25s ease;
+      opacity 0.3s ease,
+      max-height 0.3s ease;
+    /* Add transform for smoother performance */
+    transform: translateY(-10px);
   }
   .navbar-collapse.show {
-    max-height: 500px; /* ample for menu content */
+    max-height: 500px;
     opacity: 1;
+    transform: translateY(0);
+    background: var(--charcoal-2);
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
   }
 }
 </style>
