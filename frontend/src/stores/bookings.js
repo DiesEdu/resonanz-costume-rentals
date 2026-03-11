@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { useAuthStore } from './auth'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/costume-rental/backend'
 
@@ -10,12 +11,27 @@ export const useBookingsStore = defineStore('bookings', () => {
 
   // ── Fetch bookings (optionally filter by email) ────────────────────────────
   const fetchBookings = async ({ email = '', customerId = null } = {}) => {
+    const authStore = useAuthStore()
+    const currentUserId = authStore.user?.id ?? null
+    const role = authStore.role
+    const isManagement = ['admin', 'costume_management'].includes(role)
+
     loading.value = true
     error.value = null
     try {
+      // For regular users, always scope the request to their own bookings.
+      // Managers/admins can optionally pass a customerId (or none to fetch all).
+      if (!isManagement && !currentUserId) {
+        bookings.value = []
+        throw new Error('Please sign in to view your bookings.')
+      }
+
       const params = new URLSearchParams()
       if (email) params.set('email', email)
-      if (customerId) params.set('customerId', customerId)
+
+      const effectiveCustomerId = isManagement ? customerId : currentUserId
+      if (effectiveCustomerId) params.set('customerId', effectiveCustomerId)
+
       const qs = params.toString() ? `?${params.toString()}` : ''
       const res = await fetch(`${API_BASE}/api/bookings${qs}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)

@@ -52,7 +52,7 @@
           >
             <i class="bi bi-x-circle me-1"></i> Clear Filters
           </button>
-          <router-link to="/costumes/add" class="btn btn-primary btn-sm">
+          <router-link v-if="canAddCostume" to="/costumes/add" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i> Add Costume
           </router-link>
         </div>
@@ -116,14 +116,19 @@ import CostumeCard from '@/components/CostumeCard.vue'
 import CategoryFilter from '@/components/CategoryFilter.vue'
 import BookingModal from '@/components/BookingModal.vue'
 import { useCostumesStore } from '@/stores/costumes'
+import { useAuthStore } from '@/stores/auth'
 
 const costumesStore = useCostumesStore()
+const authStore = useAuthStore()
 const bookingModal = ref(null)
 const selectedCostume = ref(null)
 const selectedCategory = ref('All')
 const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = 8
+const canAddCostume = computed(() =>
+  ['costume_management', 'admin'].includes(authStore.role),
+)
 
 // Fetch costumes & categories from API
 onMounted(async () => {
