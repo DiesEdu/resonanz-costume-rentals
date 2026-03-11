@@ -49,7 +49,7 @@
               >
             </router-link>
           </li>
-          <li class="nav-item">
+          <li class="nav-item" v-if="isManager">
             <router-link class="nav-link" to="/manage/bookings" active-class="active" @click="closeNav">
               Manage
             </router-link>
@@ -110,6 +110,7 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 const bookingCount = computed(() => bookingsStore.bookings.length)
+const isManager = computed(() => ['costume_management', 'admin'].includes(authStore.role))
 const isScrolled = ref(false)
 const userOpen = ref(false)
 const userMenuRef = ref(null)

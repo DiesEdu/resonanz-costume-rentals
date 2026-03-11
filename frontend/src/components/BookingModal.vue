@@ -53,21 +53,6 @@
                   </div>
                 </div>
 
-                <div class="mb-3">
-                  <label class="form-label fw-bold">Your Name</label>
-                  <input type="text" class="form-control" v-model="customerName" required />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label fw-bold">Email</label>
-                  <input type="email" class="form-control" v-model="email" required />
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label fw-bold">Phone</label>
-                  <input type="tel" class="form-control" v-model="phone" required />
-                </div>
-
                 <div
                   v-if="totalDays > 0"
                   class="alert alert-info d-flex justify-content-between align-items-center"
@@ -96,6 +81,8 @@
 import { ref, computed, watch } from 'vue'
 import { Modal } from 'bootstrap'
 import { useBookingsStore } from '@/stores/bookings'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   costume: {
@@ -107,15 +94,14 @@ const props = defineProps({
 const emit = defineEmits(['booked'])
 
 const bookingsStore = useBookingsStore()
+const authStore = useAuthStore()
+const router = useRouter()
 const modalRef = ref(null)
 let modalInstance = null
 
 const selectedSize = ref('')
 const startDate = ref('')
 const endDate = ref('')
-const customerName = ref('')
-const email = ref('')
-const phone = ref('')
 
 const minDate = new Date().toISOString().split('T')[0]
 
@@ -136,9 +122,6 @@ const isValid = computed(() => {
     selectedSize.value &&
     startDate.value &&
     endDate.value &&
-    customerName.value &&
-    email.value &&
-    phone.value &&
     totalDays.value > 0
   )
 })
@@ -164,13 +147,24 @@ const hide = () => {
 }
 
 const submitBooking = () => {
+  if (!authStore.isLoggedIn) {
+    alert('Please sign in to place a booking.')
+    router.push('/login')
+    return
+  }
+
+  const customerName = authStore.user?.name || 'Unknown'
+  const email = authStore.user?.email || ''
+  const phone = authStore.user?.phone || ''
+
   const booking = {
     costumeId: props.costume.id,
     costumeName: props.costume.name,
     costumeImage: props.costume.image,
-    customerName: customerName.value,
-    email: email.value,
-    phone: phone.value,
+    customerName,
+    email,
+    phone,
+    userId: authStore.user?.id || null,
     startDate: startDate.value,
     endDate: endDate.value,
     size: selectedSize.value,
@@ -184,9 +178,6 @@ const submitBooking = () => {
   // Reset form
   startDate.value = ''
   endDate.value = ''
-  customerName.value = ''
-  email.value = ''
-  phone.value = ''
 }
 
 defineExpose({ show, hide })
