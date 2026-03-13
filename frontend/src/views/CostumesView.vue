@@ -42,7 +42,7 @@
       <!-- Results count -->
       <div class="d-flex justify-content-between align-items-center my-4 reveal">
         <p class="text-muted mb-0" style="font-size: 0.85rem; letter-spacing: 0.08em">
-          Showing <strong style="color: var(--gold)">{{ filteredCostumes.length }}</strong> costumes
+          Showing <strong style="color: var(--gold)">{{ totalItems }}</strong> costumes
         </p>
         <div class="d-flex gap-2 align-items-center">
           <button
@@ -59,7 +59,7 @@
       </div>
 
       <!-- Grid -->
-      <div v-if="filteredCostumes.length > 0" class="row g-4">
+      <div v-if="paginatedCostumes.length > 0" class="row g-4">
         <div
           v-for="(costume, i) in paginatedCostumes"
           :key="costume.id"
@@ -81,13 +81,13 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="filteredCostumes.length > pageSize" class="d-flex justify-content-center mt-4">
+      <div v-if="totalPages > 1" class="d-flex justify-content-center mt-4">
         <nav class="pagination-nav">
           <button class="page-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
-            ‹
+            Prev
           </button>
           <button
-            v-for="page in totalPages"
+            v-for="page in visiblePages"
             :key="page"
             class="page-btn"
             :class="{ active: page === currentPage }"
@@ -100,7 +100,7 @@
             :disabled="currentPage === totalPages"
             @click="goToPage(currentPage + 1)"
           >
-            ›
+            Next
           </button>
         </nav>
       </div>
@@ -130,39 +130,50 @@ const currentPage = ref(1)
 const pageSize = 8
 const canAddCostume = computed(() => ['costume_management', 'admin'].includes(authStore.role))
 
+const totalItems = computed(
+  () => costumesStore.pagination.total ?? costumesStore.costumes.length ?? 0,
+)
+const totalPages = computed(() => Math.max(costumesStore.pagination.total_pages ?? 1, 1))
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxButtons = 5
+  const half = Math.floor(maxButtons / 2)
+
+  let start = Math.max(1, current - half)
+  let end = Math.min(total, current + half)
+
+  const visibleCount = end - start + 1
+  if (visibleCount < maxButtons) {
+    const remaining = maxButtons - visibleCount
+    if (start === 1) end = Math.min(total, end + remaining)
+    else start = Math.max(1, start - remaining)
+  }
+
+  const pages = []
+  for (let p = start; p <= end; p += 1) pages.push(p)
+  return pages
+})
+const paginatedCostumes = computed(() => costumesStore.costumes)
+
+const loadCostumes = async (page = 1) => {
+  await costumesStore.fetchCostumes({
+    category: selectedCategory.value,
+    search: searchQuery.value,
+    page,
+    perPage: pageSize,
+  })
+  currentPage.value = costumesStore.pagination.current_page ?? page
+}
+
 // Fetch costumes & categories from API
 onMounted(async () => {
-  await costumesStore.fetchCostumes()
+  await loadCostumes(currentPage.value)
 })
 
-const filteredCostumes = computed(() => {
-  let result = costumesStore.costumes
-  if (selectedCategory.value !== 'All')
-    result = result.filter((c) => c.category === selectedCategory.value)
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    result = result.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q),
-    )
-  }
-  currentPage.value = 1
-  return result
-})
-
-const totalPages = computed(() =>
-  filteredCostumes.value.length === 0 ? 1 : Math.ceil(filteredCostumes.value.length / pageSize),
-)
-
-const paginatedCostumes = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredCostumes.value.slice(start, start + pageSize)
-})
-
-const goToPage = (page) => {
-  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+const goToPage = async (page) => {
+  const target = Math.min(Math.max(page, 1), totalPages.value)
+  await loadCostumes(target)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -196,12 +207,12 @@ onMounted(() => {
   observeRevealElements()
   // Re-run observer when the grid updates so new cards become visible
   watch(
-    filteredCostumes,
+    () => costumesStore.costumes,
     async () => {
       await nextTick()
       observeRevealElements()
     },
-    { flush: 'post' },
+    { flush: 'post', deep: true },
   )
   // Also when switching pages so new page cards animate in
   watch(
@@ -214,14 +225,9 @@ onMounted(() => {
   )
 })
 
-// Keep page within bounds when filters change
-watch(
-  filteredCostumes,
-  () => {
-    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
-  },
-  { flush: 'post' },
-)
+watch([selectedCategory, searchQuery], async () => {
+  await loadCostumes(1)
+})
 </script>
 
 <style scoped>
@@ -323,3 +329,4 @@ watch(
   cursor: not-allowed;
 }
 </style>
+

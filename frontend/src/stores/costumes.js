@@ -7,6 +7,12 @@ export const useCostumesStore = defineStore('costumes', () => {
   const costumes = ref([])
   const loading = ref(false)
   const error = ref(null)
+  const pagination = ref({
+    current_page: 1,
+    per_page: 8,
+    total: 0,
+    total_pages: 1,
+  })
 
   // cache for filename → driveId
   const driveIdCache = ref({})
@@ -14,7 +20,7 @@ export const useCostumesStore = defineStore('costumes', () => {
   const token = localStorage.getItem('auth_token')
 
   // ── Fetch all costumes ─────────────────────────────────────────────────────
-  const fetchCostumes = async ({ category = '', search = '' } = {}) => {
+  const fetchCostumes = async ({ category = '', search = '', page = 1, perPage = pagination.value.per_page } = {}) => {
     loading.value = true
     error.value = null
 
@@ -22,6 +28,8 @@ export const useCostumesStore = defineStore('costumes', () => {
       const params = new URLSearchParams()
       if (category && category !== 'All') params.set('category', category)
       if (search) params.set('search', search)
+      params.set('page', page)
+      params.set('per_page', perPage)
 
       const qs = params.toString()
 
@@ -34,7 +42,13 @@ export const useCostumesStore = defineStore('costumes', () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
       const json = await res.json()
-      costumes.value = json.data
+      costumes.value = json.data ?? []
+      pagination.value = {
+        current_page: json.pagination?.current_page ?? page,
+        per_page: json.pagination?.per_page ?? perPage,
+        total: json.pagination?.total ?? costumes.value.length,
+        total_pages: Math.max(json.pagination?.total_pages ?? 1, 1),
+      }
     } catch (err) {
       error.value = err.message
     } finally {
@@ -158,6 +172,7 @@ export const useCostumesStore = defineStore('costumes', () => {
     categories,
     loading,
     error,
+    pagination,
     driveIdCache,
 
     fetchCostumes,
