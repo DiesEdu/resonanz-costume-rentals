@@ -1,8 +1,10 @@
 <template>
   <div class="card costume-card h-100 shine-hover">
     <div class="position-relative overflow-hidden">
-      <img :src="costume.image" class="card-img-top costume-image" :alt="costume.name" />
-      <span class="category-badge position-absolute top-0 start-0 m-3">{{ costume.category }}</span>
+      <LazyDriveImage v-if="imageUrl" :fileId="imageUrl" :alt="costume.name" />
+      <span class="category-badge position-absolute top-0 start-0 m-3">{{
+        costume.group_category
+      }}</span>
 
       <!-- hover overlay -->
       <div class="card-img-hover-overlay">
@@ -16,29 +18,29 @@
     </div>
 
     <div class="card-body d-flex flex-column">
-      <div class="mb-1">
+      <!-- <div class="mb-1">
         <small class="text-warning fw-bold">
           <i class="bi bi-star-fill"></i> {{ costume.rating }}
         </small>
         <small class="text-muted ms-1">({{ costume.reviews }})</small>
-      </div>
+      </div> -->
 
       <h5 class="card-title mb-2 fw-bold">{{ costume.name }}</h5>
       <h5>
         <span class="fst-italic">{{ costume.costume_code }}</span>
-        <span class="text-muted ms-2" style="font-size: 0.7em"> - ({{ costume.amount }})</span>
+        <span class="text-muted ms-2" style="font-size: 0.7em"> - ({{ costume.quantity }})</span>
       </h5>
 
-      <p class="card-text text-muted small flex-grow-1" style="line-height: 1.6">
+      <!-- <p class="card-text text-muted small flex-grow-1" style="line-height: 1.6">
         {{ truncatedDescription }}
-      </p>
+      </p> -->
 
       <div
         class="d-flex align-items-center justify-content-between mt-3 pt-3"
         style="border-top: 1px solid rgba(201, 168, 76, 0.15)"
       >
         <small class="text-muted">
-          <i class="bi bi-rulers me-1" style="color: var(--gold)"></i>{{ costume.size.join(', ') }}
+          <i class="bi bi-rulers me-1" style="color: var(--gold)"></i>{{ costume.size }}
         </small>
         <router-link :to="`/costume/${costume.id}`" class="btn btn-outline-primary btn-sm">
           Details <i class="bi bi-arrow-right ms-1"></i>
@@ -49,18 +51,29 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import LazyDriveImage from './LazyDriveImage.vue'
+import { useCostumesStore } from '@/stores/costumes'
+
+const costumesStore = useCostumesStore()
 
 const props = defineProps({
   costume: { type: Object, required: true },
 })
+
 defineEmits(['book'])
 
-const truncatedDescription = computed(() =>
-  props.costume.description.length > 90
-    ? props.costume.description.substring(0, 90) + '…'
-    : props.costume.description,
-)
+const imageUrl = ref(null)
+
+// const truncatedDescription = computed(() =>
+//   props.costume.description?.length > 90
+//     ? props.costume.description.substring(0, 90) + '…'
+//     : props.costume.description,
+// )
+
+onMounted(async () => {
+  imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
+})
 </script>
 
 <style scoped>

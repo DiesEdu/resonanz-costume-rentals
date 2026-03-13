@@ -8,24 +8,31 @@ export const useCostumesStore = defineStore('costumes', () => {
   const loading = ref(false)
   const error = ref(null)
 
+  // cache for filename → driveId
+  const driveIdCache = ref({})
+
   const token = localStorage.getItem('auth_token')
 
-  // ── Fetch all costumes (optional filters) ──────────────────────────────────
+  // ── Fetch all costumes ─────────────────────────────────────────────────────
   const fetchCostumes = async ({ category = '', search = '' } = {}) => {
     loading.value = true
     error.value = null
+
     try {
       const params = new URLSearchParams()
       if (category && category !== 'All') params.set('category', category)
       if (search) params.set('search', search)
 
       const qs = params.toString()
+
       const res = await fetch(`${API_BASE}/api/costumes${qs ? '?' + qs : ''}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
       const json = await res.json()
       costumes.value = json.data
     } catch (err) {
@@ -35,10 +42,10 @@ export const useCostumesStore = defineStore('costumes', () => {
     }
   }
 
-  // ── Fetch categories ───────────────────────────────────────────────────────
+  // ── Categories ─────────────────────────────────────────────────────────────
   const categories = ref(['All', 'BMS', 'JCO', 'TRCC', 'ARMONIA', 'TRMS'])
 
-  // ── Get single costume by id (from cache or API) ──────────────────────────
+  // ── Get single costume ─────────────────────────────────────────────────────
   const getCostumeById = async (id) => {
     const cached = costumes.value.find((c) => c.id === Number(id))
     if (cached) return cached
@@ -49,7 +56,9 @@ export const useCostumesStore = defineStore('costumes', () => {
           Authorization: `Bearer ${token}`,
         },
       })
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
       const json = await res.json()
       return json.data
     } catch (err) {
@@ -58,6 +67,7 @@ export const useCostumesStore = defineStore('costumes', () => {
     }
   }
 
+  // ── Filters ────────────────────────────────────────────────────────────────
   const getCostumesByCategory = computed(() => (category) => {
     if (category === 'All') return costumes.value
     return costumes.value.filter((c) => c.category === category)
@@ -65,6 +75,7 @@ export const useCostumesStore = defineStore('costumes', () => {
 
   const searchCostumes = computed(() => (query) => {
     const lowerQuery = query.toLowerCase()
+
     return costumes.value.filter(
       (c) =>
         c.name.toLowerCase().includes(lowerQuery) ||
@@ -77,8 +88,10 @@ export const useCostumesStore = defineStore('costumes', () => {
   const addCostume = async (costumeData) => {
     loading.value = true
     error.value = null
+
     try {
       const isFormData = typeof FormData !== 'undefined' && costumeData instanceof FormData
+
       const res = await fetch(`${API_BASE}/api/costumes`, {
         method: 'POST',
         headers: {
@@ -87,9 +100,13 @@ export const useCostumesStore = defineStore('costumes', () => {
         },
         body: isFormData ? costumeData : JSON.stringify(costumeData),
       })
+
       const json = await res.json()
+
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+
       costumes.value.push(json.data)
+
       return json.data
     } catch (err) {
       error.value = err.message
@@ -99,15 +116,57 @@ export const useCostumesStore = defineStore('costumes', () => {
     }
   }
 
+  // ── Resolve Google Drive fileId from filename (with cache) ─────────────────
+  const idDriveFile = async (fileName) => {
+    if (!fileName) return null
+
+    // already cached
+    if (driveIdCache.value[fileName]) {
+      return driveIdCache.value[fileName]
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/drive/files?name=${fileName}`)
+      const json = await res.json()
+
+      const fileId = json.files?.[0]?.id || null
+
+      // save to cache
+      driveIdCache.value[fileName] = fileId
+
+      return fileId
+    } catch (err) {
+      console.error('Drive API error:', err)
+      return null
+    }
+  }
+
+  // ── Helper to get image URL directly ───────────────────────────────────────
+  const getDriveImageUrl = async (fileName) => {
+    const id = await idDriveFile(fileName)
+
+    if (!id) return null
+
+    console.log('id', id)
+    //drive.google.com/thumbnail?id=${fileId}&sz=w1200
+
+    return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`
+  }
+
   return {
     costumes,
     categories,
     loading,
     error,
+    driveIdCache,
+
     fetchCostumes,
     getCostumeById,
     getCostumesByCategory,
     searchCostumes,
     addCostume,
+
+    idDriveFile,
+    getDriveImageUrl,
   }
 })

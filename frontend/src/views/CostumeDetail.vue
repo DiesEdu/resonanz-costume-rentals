@@ -22,12 +22,10 @@
         <!-- Image -->
         <div class="col-lg-6">
           <div class="detail-image-wrapper position-sticky" style="top: 90px">
-            <img
-              :src="costume.image"
-              :alt="costume.name"
-              class="w-100"
-              style="max-height: 620px; object-fit: cover; display: block"
-            />
+            <LazyDriveImage v-if="imageUrl" :fileId="imageUrl" :alt="costume.name" />
+            <div v-else class="image-fallback">
+              <div class="image-fallback__badge">No image</div>
+            </div>
             <div class="detail-image-corners" aria-hidden="true">
               <span class="dc dc-tl"></span>
               <span class="dc dc-tr"></span>
@@ -121,6 +119,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import LazyDriveImage from '@/components/LazyDriveImage.vue'
 import BookingModal from '@/components/BookingModal.vue'
 import { useCostumesStore } from '@/stores/costumes'
 import { useBookingsStore } from '@/stores/bookings'
@@ -130,9 +129,11 @@ const costumesStore = useCostumesStore()
 const bookingsStore = useBookingsStore()
 const bookingModal = ref(null)
 const costume = ref(null)
+const imageUrl = ref(null)
 
 onMounted(async () => {
   costume.value = await costumesStore.getCostumeById(route.params.id)
+  imageUrl.value = await costumesStore.getDriveImageUrl(costume.value.image)
 })
 
 const assurances = [
@@ -224,5 +225,28 @@ const onBooked = () => bookingsStore.showBookingToast()
   padding: 12px;
   border: 1px solid rgba(201, 168, 76, 0.12);
   background: rgba(201, 168, 76, 0.03);
+}
+
+.image-fallback {
+  height: 620px;
+  display: grid;
+  place-items: center;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.03),
+    rgba(0, 0, 0, 0.03) 10px,
+    rgba(0, 0, 0, 0.06) 10px,
+    rgba(0, 0, 0, 0.06) 20px
+  );
+  border: 1px dashed rgba(201, 168, 76, 0.35);
+  color: #8a7a52;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.85rem;
+}
+.image-fallback__badge {
+  padding: 10px 16px;
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  background: rgba(255, 255, 255, 0.85);
 }
 </style>

@@ -24,3 +24,29 @@ ALTER TABLE costumes ADD COLUMN costume_code VARCHAR(255) NOT NULL AFTER name;
 ALTER TABLE costumes ADD COLUMN amount INT NOT NULL AFTER container;
 ALTER TABLE bookings ADD COLUMN amount_book INT NOT NULL AFTER size;
 ----------------------------------------------------------------------------------------
+DROP TABLE costume_sizes;
+ALTER TABLE costumes DROP COLUMN container;
+ALTER TABLE costumes ADD COLUMN rack_id INT NOT NULL AFTER category;
+ALTER TABLE costumes ADD COLUMN size VARCHAR(255) NOT NULL AFTER rack_id;
+ALTER TABLE costumes DROP COLUMN category;
+ALTER TABLE costumes ADD COLUMN group_category VARCHAR(255) NOT NULL AFTER costume_code;
+ALTER TABLE costumes
+DROP COLUMN amount,
+DROP COLUMN description,
+DROP COLUMN available,
+DROP COLUMN rating,
+DROP COLUMN reviews;
+CREATE TABLE IF NOT EXISTS group_category (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)
+CREATE TABLE IF NOT EXISTS costume_stock (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    costume_id INT NOT NULL,
+    quantity INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (costume_id) REFERENCES costumes(id) ON DELETE CASCADE
+)

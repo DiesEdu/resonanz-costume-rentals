@@ -44,14 +44,14 @@ function listCostumes(): void
     $category = $_GET['category'] ?? '';
     $search = $_GET['search'] ?? '';
 
-    $sql = 'SELECT c.*, GROUP_CONCAT(cs.size ORDER BY FIELD(cs.size,"XS","S","M","L","XL") SEPARATOR ",") AS sizes
-               FROM costumes c
-               LEFT JOIN costume_sizes cs ON cs.costume_id = c.id
-               WHERE 1=1';
+    $sql = 'SELECT c.*, COALESCE(SUM(cs.quantity),0) AS quantity
+        FROM costumes c
+        LEFT JOIN costume_stock cs ON cs.costume_id = c.id
+        WHERE 1 = 1';
     $params = [];
 
     if ($category && $category !== 'All') {
-        $sql .= ' AND c.category = :category';
+        $sql .= ' AND c.group_category = :category';
         $params[':category'] = $category;
     }
 
@@ -79,11 +79,11 @@ function getCostume(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT c.*, GROUP_CONCAT(cs.size ORDER BY FIELD(cs.size,"XS","S","M","L","XL") SEPARATOR ",") AS sizes
-         FROM costumes c
-         LEFT JOIN costume_sizes cs ON cs.costume_id = c.id
-         WHERE c.id = :id
-         GROUP BY c.id'
+        'SELECT c.*, COALESCE(SUM(cs.quantity),0) AS quantity
+        FROM costumes c
+        LEFT JOIN costume_stock cs ON cs.costume_id = c.id
+        WHERE c.id = :id
+        GROUP BY c.id;'
     );
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
@@ -111,31 +111,9 @@ function createCostume(): void
 
     $name = trim($body['name'] ?? '');
     $costume_code = trim($body['costume_code'] ?? '');
-    $category = trim($body['category'] ?? '');
-    $container = trim($body['container'] ?? '');
-    $amount = trim($body['amount'] ?? '');
-    $description = trim($body['description'] ?? '');
-    $available = isset($body['available']) ? (int) $body['available'] : 1;
-
-    $sizes = $body['sizes'] ?? [];
-    if ($isMultipart && isset($_POST['sizes'])) {
-        if (is_array($_POST['sizes'])) {
-            $sizes = $_POST['sizes'];
-        } elseif (is_string($_POST['sizes'])) {
-            $decoded = json_decode($_POST['sizes'], true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $sizes = $decoded;
-            }
-        }
-    } elseif (is_string($sizes)) {
-        $decoded = json_decode($sizes, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-            $sizes = $decoded;
-        }
-    }
-    if (!is_array($sizes)) {
-        $sizes = [];
-    }
+    $group_category_id = trim($body['group_category_id'] ?? '');
+    $rack_id = trim($body['rack_id'] ?? '');
+    $size = trim($body['size'] ?? '');
 
     $imagePath = trim($body['image'] ?? '');
     if ($isMultipart && isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -148,39 +126,27 @@ function createCostume(): void
         $imagePath = $upload['path'];
     }
 
-    if (!$name || !$category) {
+    if (!$name) {
         http_response_code(400);
-        echo json_encode(['error' => 'name and category are required']);
+        echo json_encode(['error' => 'name are required']);
         return;
     }
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, costume_code, category, container, amount, description, image, available)
-         VALUES (:name, :costume_code, :category, :container, :amount, :description, :image, :available)'
+        'INSERT INTO costumes (name, costume_code, group_category_id, rack_id, size, image)
+         VALUES (:name, :costume_code, :group_category_id, :rack_id, :size, :image)'
     );
     $stmt->execute([
         ':name' => $name,
         ':costume_code' => $costume_code,
-        ':category' => $category,
-        ':container' => $container,
-        ':amount' => (int) $amount,
-        ':description' => $description,
+        ':group_category_id' => $group_category_id,
+        ':rack_id' => $rack_id,
+        ':size' => $size,
         ':image' => $imagePath,
-        ':available' => $available,
     ]);
 
     $costumeId = (int) $db->lastInsertId();
-
-    // Insert sizes
-    if (!empty($sizes)) {
-        $sizeStmt = $db->prepare(
-            'INSERT IGNORE INTO costume_sizes (costume_id, size) VALUES (:costume_id, :size)'
-        );
-        foreach ($sizes as $size) {
-            $sizeStmt->execute([':costume_id' => $costumeId, ':size' => $size]);
-        }
-    }
 
     // Return the newly created costume
     getCostume($costumeId);
@@ -249,14 +215,10 @@ function formatCostume(array $row): array
         'id' => (int) $row['id'],
         'name' => $row['name'],
         'costume_code' => $row['costume_code'],
-        'category' => $row['category'],
-        'container' => $row['container'],
-        'amount' => (int) $row['amount'],
-        'size' => $row['sizes'] ? explode(',', $row['sizes']) : [],
-        'description' => $row['description'],
+        'group_category' => $row['group_category'],
+        'rack_id' => $row['rack_id'],
+        'size' => $row['size'],
+        'quantity' => $row['quantity'],
         'image' => $row['image'],
-        'available' => (bool) $row['available'],
-        'rating' => (float) $row['rating'],
-        'reviews' => (int) $row['reviews'],
     ];
 }
