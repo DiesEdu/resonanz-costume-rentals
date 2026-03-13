@@ -37,7 +37,7 @@
 
         <!-- Details -->
         <div class="col-lg-6">
-          <span class="category-badge">{{ costume.category }}</span>
+          <span class="category-badge">{{ costume.group_category }}</span>
 
           <h1
             class="fw-bold mt-3 mb-3"
@@ -49,19 +49,9 @@
           <h3>
             <span class="fst-italic">{{ costume.costume_code }}</span>
             <span class="text-muted ms-2" style="font-size: 0.7em">
-              - ({{ costume.amount }}) Availability</span
+              - ({{ costume.quantity }}) Availability</span
             >
           </h3>
-
-          <div class="d-flex align-items-center gap-3 mb-4">
-            <div class="text-warning">
-              <i v-for="n in 4" :key="n" class="bi bi-star-fill"></i>
-              <i class="bi bi-star-half"></i>
-            </div>
-            <span class="text-muted" style="font-size: 0.9rem"
-              >{{ costume.rating }} · {{ costume.reviews }} reviews</span
-            >
-          </div>
 
           <hr class="hr-gold" style="margin: 1.5rem 0" />
 
@@ -81,7 +71,7 @@
           <div class="mb-4">
             <p class="section-eyebrow mb-3">Available Sizes</p>
             <div class="d-flex gap-2 flex-wrap">
-              <span v-for="size in costume.size" :key="size" class="size-chip">{{ size }}</span>
+              <span class="size-chip">{{ costume.size }}</span>
             </div>
           </div>
 

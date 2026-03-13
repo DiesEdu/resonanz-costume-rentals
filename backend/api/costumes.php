@@ -38,11 +38,35 @@ switch ($method) {
 
 // ─────────────────────────────────────────────
 
-function listCostumes(): void
+function getCostumesCount(string $category = '', string $search = ''): int
 {
     $db = getDB();
-    $category = $_GET['category'] ?? '';
-    $search = $_GET['search'] ?? '';
+
+    $sql = 'SELECT COUNT(DISTINCT c.id) as total
+        FROM costumes c
+        LEFT JOIN costume_stock cs ON cs.costume_id = c.id
+        WHERE 1 = 1';
+    $params = [];
+
+    if ($category && $category !== 'All') {
+        $sql .= ' AND c.group_category = :category';
+        $params[':category'] = $category;
+    }
+
+    if ($search) {
+        $sql .= ' AND (c.name LIKE :search OR c.category LIKE :search OR c.description LIKE :search)';
+        $params[':search'] = '%' . $search . '%';
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    return (int) $stmt->fetchColumn();
+}
+
+function getCostumesPaginated(int $limit, int $offset, string $category = '', string $search = ''): array
+{
+    $db = getDB();
 
     $sql = 'SELECT c.*, COALESCE(SUM(cs.quantity),0) AS quantity
         FROM costumes c
@@ -60,13 +84,58 @@ function listCostumes(): void
         $params[':search'] = '%' . $search . '%';
     }
 
-    $sql .= ' GROUP BY c.id ORDER BY c.id';
+    $sql .= ' GROUP BY c.id 
+              ORDER BY c.id 
+              LIMIT :limit OFFSET :offset';
 
     $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    $rows = $stmt->fetchAll();
 
-    echo json_encode(['data' => array_map('formatCostume', $rows)]);
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll();
+}
+
+function listCostumes(): void
+{
+    // Get pagination parameters with validation
+    $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+    $perPage = isset($_GET['per_page']) ? max(1, min(100, (int) $_GET['per_page'])) : 20;
+
+    $category = $_GET['category'] ?? '';
+    $search = $_GET['search'] ?? '';
+
+    // Get total count
+    $total = getCostumesCount($category, $search);
+
+    // Calculate pagination
+    $totalPages = ceil($total / $perPage);
+    $page = min($page, max($totalPages, 1)); // Ensure page doesn't exceed total pages
+    $offset = ($page - 1) * $perPage;
+
+    // Get paginated data
+    $rows = getCostumesPaginated($perPage, $offset, $category, $search);
+
+    // Build response
+    $response = [
+        'data' => array_map('formatCostume', $rows),
+        'pagination' => [
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'total_pages' => $totalPages
+        ]
+    ];
+
+    // Set response headers
+    header('Content-Type: application/json');
+    echo json_encode($response);
 }
 
 function getCostume(int $id): void
