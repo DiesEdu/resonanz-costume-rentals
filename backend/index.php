@@ -18,6 +18,8 @@
  *   POST   /api/bookings               – create booking (JSON or multipart)
  *   PUT    /api/bookings/{id}/cancel   – cancel booking
  *   PUT    /api/bookings/{id}/status   – update booking status (processing/completed)
+ *   GET    /api/drive/files            – search single file by name
+ *   POST   /api/drive/files/batch      – batch search files from Excel/CSV
  *
  * Static files (uploads):
  *   GET    /upload/img/{filename}      – served directly
@@ -69,9 +71,9 @@ if (str_starts_with($url, 'upload/')) {
     exit;
 }
 
-$resource = $segments[0] ?? '';      // "costumes" | "bookings" | "auth"
-$idOrSub = $segments[1] ?? '';      // numeric id OR "categories" OR auth action
-$subAction = $segments[2] ?? '';      // "cancel"
+$resource = $segments[0] ?? '';      // "costumes" | "bookings" | "auth" | "drive"
+$idOrSub = $segments[1] ?? '';      // numeric id OR "categories" OR auth action OR "files"
+$subAction = $segments[2] ?? '';      // "cancel" OR "batch"
 
 // Map URL segments to ?action= convention used inside api files
 switch ($resource) {
@@ -113,8 +115,21 @@ switch ($resource) {
         break;
 
     case 'drive':
-        // /api/drive/files?name=...&folder=...
-        $_GET['action'] = $idOrSub ?: 'files';
+        // Handle different drive endpoints:
+        // GET  /api/drive/files?name=...                → ?action=files
+        // POST /api/drive/files/batch (with file upload) → ?action=files/batch
+
+        if ($idOrSub === 'files' && $subAction === 'batch') {
+            // For batch upload: /api/drive/files/batch
+            $_GET['action'] = 'files/batch';
+        } elseif ($idOrSub === 'files') {
+            // For single file search: /api/drive/files?name=...
+            $_GET['action'] = 'files';
+        } else {
+            // Default to files action
+            $_GET['action'] = $idOrSub ?: 'files';
+        }
+
         require __DIR__ . '/api/drive.php';
         break;
 
