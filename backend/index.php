@@ -112,6 +112,12 @@ switch ($resource) {
         require __DIR__ . '/api/bookings.php';
         break;
 
+    case 'drive':
+        // /api/drive/files?name=...&folder=...
+        $_GET['action'] = $idOrSub ?: 'files';
+        require __DIR__ . '/api/drive.php';
+        break;
+
     default:
         http_response_code(404);
         echo json_encode([
