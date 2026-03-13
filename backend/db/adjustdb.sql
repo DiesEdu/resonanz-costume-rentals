@@ -22,3 +22,5 @@ CREATE TABLE IF NOT EXISTS bookings (
 ALTER TABLE costumes ADD COLUMN costume_code VARCHAR(255) NOT NULL AFTER name;
 ----------------------------------------------------------------------------------------
 ALTER TABLE costumes ADD COLUMN amount INT NOT NULL AFTER container;
+ALTER TABLE bookings ADD COLUMN amount_book INT NOT NULL AFTER size;
+----------------------------------------------------------------------------------------

@@ -1,18 +1,27 @@
 # .htaccess
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # Set RewriteBase - adjust this if your backend is in a subdirectory
+    # For example: if backend is at /backend/, use: RewriteBase /backend/
+    RewriteBase /backend/
+    
+    # Serve existing files and directories directly (including uploads)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
     
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     
     # Redirect everything to index.php
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
 # Security headers
+
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "DENY"
@@ -20,10 +29,12 @@
 </IfModule>
 
 # Disable directory browsing
+
 Options -Indexes
 
 # Protect files
+
 <FilesMatch "^\.">
-    Order allow,deny
-    Deny from all
+Order allow,deny
+Deny from all
 </FilesMatch>
