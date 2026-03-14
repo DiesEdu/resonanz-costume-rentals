@@ -194,8 +194,10 @@ const isValid = computed(() => {
 })
 
 onMounted(async () => {
-  imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
-  selectedSize.value = props.costume.size
+  if (props.costume) {
+    imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
+    selectedSize.value = props.costume.size
+  }
 })
 
 watch(

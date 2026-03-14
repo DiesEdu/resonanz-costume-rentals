@@ -70,6 +70,17 @@
                 <td>
                   <div class="d-flex align-items-center gap-3">
                     <div class="thumb-wrap">
+                      <LazyDriveImage
+                        :fileId="bookingImageUrls[booking.id]"
+                        :alt="booking.costumeName"
+                        style="
+                          width: 90px;
+                          height: 90px;
+                          object-fit: cover;
+                          display: block;
+                          border-radius: 10px;
+                        "
+                      />
                       <img :src="booking.costumeImage" :alt="booking.costumeName" class="thumb" />
                     </div>
                     <div>
@@ -140,14 +151,21 @@
 import { computed, onMounted, ref } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
+import { useCostumesStore } from '@/stores/costumes'
 import { useRouter } from 'vue-router'
+
+import LazyDriveImage from '@/components/LazyDriveImage.vue'
 
 const bookingsStore = useBookingsStore()
 const authStore = useAuthStore()
+const costumesStore = useCostumesStore()
 const router = useRouter()
 const statusFilter = ref('all')
 const isActing = ref(false)
 const actingRole = computed(() => authStore.role || 'costume_management')
+
+// Map to store image URLs for each booking
+const bookingImageUrls = ref({})
 
 const refresh = () => bookingsStore.fetchBookingsManager()
 
@@ -198,6 +216,16 @@ onMounted(async () => {
     return
   }
   await bookingsStore.fetchBookingsManager()
+
+  // Load image URLs for all bookings
+  const loadedBookings = bookingsStore.getUserBookings()
+  for (const booking of loadedBookings) {
+    const imageName = booking.costumeImage || booking.costumeName
+    if (imageName) {
+      const url = await costumesStore.getDriveImageUrl(imageName)
+      bookingImageUrls.value[booking.id] = url
+    }
+  }
 })
 
 const statCards = computed(() => [
