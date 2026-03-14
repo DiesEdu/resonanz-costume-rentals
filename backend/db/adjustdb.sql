@@ -50,3 +50,5 @@ CREATE TABLE IF NOT EXISTS costume_stock (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (costume_id) REFERENCES costumes(id) ON DELETE CASCADE
 )
+----------------------------------------------------------------------------------------
+ALTER TABLE bookings DROP COLUMN size;

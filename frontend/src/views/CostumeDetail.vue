@@ -22,7 +22,12 @@
         <!-- Image -->
         <div class="col-lg-6">
           <div class="detail-image-wrapper position-sticky" style="top: 90px">
-            <LazyDriveImage v-if="imageUrl" :fileId="imageUrl" :alt="costume.name" />
+            <LazyDriveImage
+              v-if="imageUrl"
+              :fileId="imageUrl"
+              :alt="costume.name"
+              style="height: 100% !important"
+            />
             <div v-else class="image-fallback">
               <div class="image-fallback__badge">No image</div>
             </div>

@@ -167,29 +167,68 @@ function createBooking(): void
 
     $db = getDB();
 
-    // Ensure customer exists before proceeding
-    $customerId = (int) ($user['id'] ?? $body['customerId']);
-    $customerStmt = $db->prepare('SELECT id FROM users WHERE id = :id');
-    $customerStmt->execute([':id' => $customerId]);
-    if (!$customerStmt->fetchColumn()) {
-        http_response_code(404);
-        echo json_encode(['error' => 'Customer not found']);
+    // Check costume availability
+    $costumeId = (int) $body['costumeId'];
+    $requestedAmount = (int) $body['amount'];
+    $startDate = $body['startDate'];
+    $endDate = $body['endDate'];
+
+    // Get total stock quantity for the costume
+    $stockStmt = $db->prepare('SELECT quantity FROM costume_stock WHERE costume_id = :costume_id');
+    $stockStmt->execute([':costume_id' => $costumeId]);
+    $stockRow = $stockStmt->fetch();
+
+    if (!$stockRow) {
+        http_response_code(422);
+        echo json_encode(['error' => 'Costume stock not found']);
+        return;
+    }
+
+    $totalStock = (int) $stockRow['quantity'];
+
+    // Calculate total booked amount for overlapping dates
+    // Overlap occurs when: (new_start <= existing_end) AND (new_end >= existing_start)
+    $bookedStmt = $db->prepare('
+        SELECT COALESCE(SUM(amount_book), 0) AS total_booked
+        FROM bookings
+        WHERE costume_id = :costume_id
+        AND status NOT IN ("cancelled", "completed")
+        AND start_date <= :end_date
+        AND end_date >= :start_date
+    ');
+    $bookedStmt->execute([
+        ':costume_id' => $costumeId,
+        ':start_date' => $startDate,
+        ':end_date' => $endDate
+    ]);
+    $bookedRow = $bookedStmt->fetch();
+    $totalBooked = (int) $bookedRow['total_booked'];
+
+    $availableAmount = $totalStock - $totalBooked;
+
+    if ($requestedAmount > $availableAmount) {
+        http_response_code(422);
+        echo json_encode([
+            'error' => 'Insufficient stock available',
+            'available' => $availableAmount,
+            'requested' => $requestedAmount,
+            'total_stock' => $totalStock
+        ]);
         return;
     }
 
     $stmt = $db->prepare(
         'INSERT INTO bookings
-            (costume_id, customer_id, start_date, end_date, size, amount_book, status, booking_date)
+            (costume_id, customer_id, start_date, end_date, amount_book, status, booking_date)
          VALUES
-            (:costume_id, :customer_id, :start_date, :end_date, :size, :amount, "waiting_approval", CURDATE())'
+            (:costume_id, :customer_id, :start_date, :end_date, :amount, "waiting_approval", CURDATE())'
     );
 
     $stmt->execute([
         ':costume_id' => (int) $body['costumeId'],
-        ':customer_id' => $customerId,
+        ':customer_id' => (int) $body['customerId'],
         ':start_date' => $body['startDate'],
         ':end_date' => $body['endDate'],
-        ':size' => $body['size'],
         ':amount' => (int) $body['amount'],
     ]);
 
@@ -329,7 +368,6 @@ function formatBooking(array $row): array
         'customerId' => (int) $row['customer_id'],
         'startDate' => $row['start_date'],
         'endDate' => $row['end_date'],
-        'size' => $row['size'],
         'amount' => (int) $row['amount_book'],
         'status' => $row['status'],
         'bookingDate' => $row['booking_date'],

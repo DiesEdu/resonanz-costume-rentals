@@ -26,9 +26,12 @@
     <div class="modal fade" id="bookingModal" tabindex="-1" ref="modalRef">
       <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow">
-          <div class="modal-header bg-primary text-white border-0">
-            <h5 class="modal-title fw-bold">
-              <i class="bi bi-calendar-check me-2"></i>Book Costume
+          <div
+            class="modal-header bg-primary text-white border-0"
+            style="background: var(--charcoal-2) !important"
+          >
+            <h5 class="modal-title fw-bold" style="color: var(--gold)">
+              <i class="bi bi-calendar-check me-2" style="color: var(--gold)"></i>Book Costume
             </h5>
             <button
               type="button"
@@ -39,11 +42,7 @@
           <div class="modal-body p-4">
             <div v-if="costume" class="row">
               <div class="col-md-5 mb-3 mb-md-0">
-                <img
-                  :src="costume.image"
-                  class="img-fluid rounded-3 shadow-sm"
-                  :alt="costume.name"
-                />
+                <LazyDriveImage v-if="imageUrl" :fileId="imageUrl" :alt="costume.name" />
                 <h5 class="mt-3 fw-bold">{{ costume.name }}</h5>
               </div>
               <div class="col-md-7">
@@ -52,14 +51,12 @@
                     <label class="form-label fw-bold">Select Size</label>
                     <div class="d-flex gap-2 flex-wrap">
                       <button
-                        v-for="size in costume.size"
-                        :key="size"
                         type="button"
                         class="btn"
-                        :class="selectedSize === size ? 'btn-primary' : 'btn-outline-secondary'"
-                        @click="selectedSize = size"
+                        :class="'btn-primary'"
+                        @click="selectedSize = costume.size"
                       >
-                        {{ size }}
+                        {{ costume.size }}
                       </button>
                     </div>
                   </div>
@@ -82,32 +79,30 @@
                         class="form-control"
                         v-model="endDate"
                         :min="startDate || minDate"
-                    required
-                  />
-                </div>
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">Amount</label>
-                    <div class="input-group">
-                      <input
-                        type="number"
-                        class="form-control"
-                        v-model.number="amount"
-                        :min="1"
-                        :max="availableAmount"
-                        :disabled="availableAmount === 0"
                         required
                       />
-                      <span class="input-group-text bg-light">
-                        Remainder: {{ remainingAmount }}
-                      </span>
                     </div>
-                    <small class="text-muted">
-                      Max {{ availableAmount }} available
-                    </small>
+                    <div class="row">
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Amount</label>
+                        <div class="input-group">
+                          <input
+                            type="number"
+                            class="form-control"
+                            v-model.number="amount"
+                            :min="1"
+                            :max="availableAmount"
+                            :disabled="availableAmount === 0"
+                            required
+                          />
+                          <span class="input-group-text bg-light">
+                            Remainder: {{ remainingAmount }}
+                          </span>
+                        </div>
+                        <small class="text-muted"> Max {{ availableAmount }} available </small>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
                   <div
                     v-if="totalDays > 0"
@@ -134,11 +129,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { Modal, Toast } from 'bootstrap'
 import { useBookingsStore } from '@/stores/bookings'
+import { useCostumesStore } from '@/stores/costumes'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import LazyDriveImage from '@/components/LazyDriveImage.vue'
 
 const props = defineProps({
   costume: {
@@ -150,6 +147,7 @@ const props = defineProps({
 const emit = defineEmits(['booked'])
 
 const bookingsStore = useBookingsStore()
+const costumesStore = useCostumesStore()
 const authStore = useAuthStore()
 const router = useRouter()
 const modalRef = ref(null)
@@ -166,6 +164,8 @@ const startDate = ref('')
 const endDate = ref('')
 const amount = ref(1)
 
+const imageUrl = ref(null)
+
 const minDate = new Date().toISOString().split('T')[0]
 
 const totalDays = computed(() => {
@@ -176,7 +176,7 @@ const totalDays = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const availableAmount = computed(() => Number(props.costume?.amount ?? 0))
+const availableAmount = computed(() => Number(props.costume?.quantity ?? 0))
 const remainingAmount = computed(() =>
   Math.max(availableAmount.value - Number(amount.value || 0), 0),
 )
@@ -189,8 +189,13 @@ const isValid = computed(() => {
     totalDays.value > 0 &&
     amount.value >= 1 &&
     amount.value <= availableAmount.value &&
-    availableAmount.value > 0
+    availableAmount.value >= 0
   )
+})
+
+onMounted(async () => {
+  imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
+  selectedSize.value = props.costume.size
 })
 
 watch(

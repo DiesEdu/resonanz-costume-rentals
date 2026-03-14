@@ -20,7 +20,12 @@ export const useCostumesStore = defineStore('costumes', () => {
   const token = localStorage.getItem('auth_token')
 
   // ── Fetch all costumes ─────────────────────────────────────────────────────
-  const fetchCostumes = async ({ category = '', search = '', page = 1, perPage = pagination.value.per_page } = {}) => {
+  const fetchCostumes = async ({
+    category = '',
+    search = '',
+    page = 1,
+    perPage = pagination.value.per_page,
+  } = {}) => {
     loading.value = true
     error.value = null
 
@@ -160,8 +165,6 @@ export const useCostumesStore = defineStore('costumes', () => {
     const id = await idDriveFile(fileName)
 
     if (!id) return null
-
-    console.log('id', id)
     //drive.google.com/thumbnail?id=${fileId}&sz=w1200
 
     return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`

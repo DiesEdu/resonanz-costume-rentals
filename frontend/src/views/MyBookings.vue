@@ -26,8 +26,8 @@
             <!-- Image -->
             <div class="col-auto">
               <div class="booking-img-wrap">
-                <img
-                  :src="booking.costumeImage"
+                <LazyDriveImage
+                  :fileId="bookingImageUrls[booking.id]"
                   :alt="booking.costumeName"
                   style="
                     width: 90px;
@@ -103,7 +103,9 @@
           Are you sure you want to cancel this booking? This action cannot be undone.
         </p>
         <div class="d-flex justify-content-end gap-2">
-          <button class="btn btn-outline-secondary btn-sm" @click="closeCancelModal">Keep Booking</button>
+          <button class="btn btn-outline-secondary btn-sm" @click="closeCancelModal">
+            Keep Booking
+          </button>
           <button class="btn btn-danger btn-sm" @click="confirmCancel">Cancel Booking</button>
         </div>
       </div>
@@ -112,14 +114,20 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
+import { useCostumesStore } from '@/stores/costumes'
+import LazyDriveImage from '@/components/LazyDriveImage.vue'
 
 const bookingsStore = useBookingsStore()
 const authStore = useAuthStore()
+const costumesStore = useCostumesStore()
 const bookings = computed(() => bookingsStore.getUserBookings())
 const cancelModal = reactive({ open: false, bookingId: null })
+
+// Map to store image URLs for each booking
+const bookingImageUrls = ref({})
 
 const formatDate = (dateString) =>
   new Date(dateString).toLocaleDateString('en-US', {
@@ -154,6 +162,16 @@ const confirmCancel = async () => {
 onMounted(async () => {
   const userId = authStore.user?.id || null
   await bookingsStore.fetchBookings({ customerId: userId })
+
+  // Load image URLs for all bookings
+  const loadedBookings = bookingsStore.getUserBookings()
+  for (const booking of loadedBookings) {
+    const imageName = booking.costumeImage || booking.costumeName
+    if (imageName) {
+      const url = await costumesStore.getDriveImageUrl(imageName)
+      bookingImageUrls.value[booking.id] = url
+    }
+  }
 
   const obs = new IntersectionObserver(
     (entries) =>
