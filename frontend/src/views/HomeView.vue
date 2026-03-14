@@ -45,7 +45,12 @@
           </router-link>
         </div>
 
-        <div class="row g-4">
+        <div v-if="isLoading" class="text-center py-5">
+          <div class="spinner-border text-warning" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <div v-else class="row g-4">
           <div
             v-for="(costume, i) in featuredCostumes"
             :key="costume.id"
@@ -59,7 +64,7 @@
     </section>
 
     <!-- ── Categories ───────────────────────────── -->
-    <section class="py-section" style="background: var(--ivory)">
+    <!-- <section class="py-section" style="background: var(--ivory)">
       <div class="container">
         <div class="text-center mb-5 reveal">
           <p class="section-eyebrow">Explore by Theme</p>
@@ -90,7 +95,7 @@
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- ── Testimonial strip ─────────────────────── -->
     <section class="py-5" style="background: var(--charcoal-2)">
@@ -155,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import Hero from '@/components/Hero.vue'
 import CostumeCard from '@/components/CostumeCard.vue'
 import BookingModal from '@/components/BookingModal.vue'
@@ -168,11 +173,26 @@ const bookingModal = ref(null)
 const selectedCostume = ref(null)
 
 const featuredCostumes = computed(() => costumesStore.costumes.slice(0, 4))
+const isLoading = computed(() => costumesStore.loading)
 
 // Fetch data from API on mount
 onMounted(async () => {
   await costumesStore.fetchCostumes()
 })
+
+// Watch for data changes and add visible class to newly rendered elements
+watch(
+  () => featuredCostumes.value,
+  () => {
+    // Use nextTick equivalent - Vue updates DOM after script, so we use setTimeout
+    setTimeout(() => {
+      document.querySelectorAll('.reveal:not(.visible)').forEach((el) => {
+        el.classList.add('visible')
+      })
+    }, 50)
+  },
+  { immediate: false },
+)
 
 const steps = [
   {
@@ -192,26 +212,26 @@ const steps = [
   },
 ]
 
-const popularCategories = [
-  {
-    name: 'Superheroes',
-    count: 45,
-    image:
-      'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500&auto=format&fit=crop&q=60',
-  },
-  {
-    name: 'Historical',
-    count: 38,
-    image:
-      'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&auto=format&fit=crop&q=60',
-  },
-  {
-    name: 'Fantasy',
-    count: 52,
-    image:
-      'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60',
-  },
-]
+// const popularCategories = [
+//   {
+//     name: 'Superheroes',
+//     count: 45,
+//     image:
+//       'https://images.unsplash.com/photo-1635805737707-575885ab0820?w=500&auto=format&fit=crop&q=60',
+//   },
+//   {
+//     name: 'Historical',
+//     count: 38,
+//     image:
+//       'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&auto=format&fit=crop&q=60',
+//   },
+//   {
+//     name: 'Fantasy',
+//     count: 52,
+//     image:
+//       'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60',
+//   },
+// ]
 
 const testimonials = [
   {
@@ -235,7 +255,7 @@ const openBooking = (costume) => {
 const onBooked = () => bookingsStore.showBookingToast()
 
 // Scroll-reveal observer
-onMounted(() => {
+const initReveal = () => {
   const observer = new IntersectionObserver(
     (entries) =>
       entries.forEach((e) => {
@@ -244,6 +264,10 @@ onMounted(() => {
     { threshold: 0.12 },
   )
   document.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
+}
+
+onMounted(() => {
+  initReveal()
 })
 </script>
 

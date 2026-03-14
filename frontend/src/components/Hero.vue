@@ -51,11 +51,6 @@
               <div class="hero-stat-value">4.9★</div>
               <div class="hero-stat-label">Avg Rating</div>
             </div>
-            <div class="stat-divider" aria-hidden="true"></div>
-            <div>
-              <div class="hero-stat-value">24h</div>
-              <div class="hero-stat-label">Delivery</div>
-            </div>
           </div>
         </div>
 
@@ -63,7 +58,7 @@
         <div class="col-lg-6 d-none d-lg-flex justify-content-center">
           <div class="hero-image-wrapper float-anim">
             <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80"
+              src="https://lh3.googleusercontent.com/d/1eTCuf4xBxmbgMgIkr53o4XVYBsbWwKNL=w1200?authuser=0"
               alt="Featured Costume"
               class="img-fluid"
               style="max-height: 580px; width: 100%; object-fit: cover"
