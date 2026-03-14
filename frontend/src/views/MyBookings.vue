@@ -47,7 +47,7 @@
               </h5>
               <p class="text-muted mb-1" style="font-size: 0.85rem">
                 <i class="bi bi-rulers me-1" style="color: var(--gold)"></i> Size:
-                {{ booking.size }}
+                <span class="fst-italic">{{ booking.costumeSize }}</span>
               </p>
               <p class="text-muted mb-0" style="font-size: 0.85rem">
                 <i class="bi bi-calendar3 me-1" style="color: var(--gold)"></i>
@@ -116,12 +116,10 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
-import { useAuthStore } from '@/stores/auth'
 import { useCostumesStore } from '@/stores/costumes'
 import LazyDriveImage from '@/components/LazyDriveImage.vue'
 
 const bookingsStore = useBookingsStore()
-const authStore = useAuthStore()
 const costumesStore = useCostumesStore()
 const bookings = computed(() => bookingsStore.getUserBookings())
 const cancelModal = reactive({ open: false, bookingId: null })
@@ -160,8 +158,7 @@ const confirmCancel = async () => {
 }
 
 onMounted(async () => {
-  const userId = authStore.user?.id || null
-  await bookingsStore.fetchBookings({ customerId: userId })
+  await bookingsStore.fetchBookings()
 
   // Load image URLs for all bookings
   const loadedBookings = bookingsStore.getUserBookings()

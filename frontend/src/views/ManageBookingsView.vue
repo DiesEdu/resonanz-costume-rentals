@@ -85,7 +85,9 @@
                     </div>
                     <div>
                       <div class="fw-semibold">{{ booking.costumeName }}</div>
-                      <div class="small">Size {{ booking.size }}</div>
+                      <div class="small">
+                        Size: <span class="fst-italic">{{ booking.costumeSize }}</span>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -218,7 +220,8 @@ onMounted(async () => {
   await bookingsStore.fetchBookingsManager()
 
   // Load image URLs for all bookings
-  const loadedBookings = bookingsStore.getUserBookings()
+  const loadedBookings = bookingsStore.manageBookings
+  console.log('loaded bookings: ', loadedBookings)
   for (const booking of loadedBookings) {
     const imageName = booking.costumeImage || booking.costumeName
     if (imageName) {
@@ -226,6 +229,7 @@ onMounted(async () => {
       bookingImageUrls.value[booking.id] = url
     }
   }
+  console.log('booking image urls: ', bookingImageUrls.value)
 })
 
 const statCards = computed(() => [

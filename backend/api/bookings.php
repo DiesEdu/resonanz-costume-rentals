@@ -64,7 +64,7 @@ function listBookings(): void
     $db = getDB();
     $customerId = $user['id'] ?? 0;
 
-    $sql = 'SELECT b.*, c.image AS costume_image
+    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, c.size AS costume_size
             FROM bookings b
             LEFT JOIN costumes c ON c.id = b.costume_id
             WHERE 1=1';
@@ -93,7 +93,7 @@ function listBookingsForManager(): void
     }
     $db = getDB();
 
-    $sql = 'SELECT b.*, c.image AS costume_image
+    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, c.size AS costume_size
             FROM bookings b
             LEFT JOIN costumes c ON c.id = b.costume_id
             WHERE 1=1';
@@ -372,5 +372,7 @@ function formatBooking(array $row): array
         'status' => $row['status'],
         'bookingDate' => $row['booking_date'],
         'costumeImage' => $row['costume_image'] ?? null,
+        'costumeName' => $row['costume_name'] ?? null,
+        'costumeSize' => $row['costume_size'] ?? null,
     ];
 }
