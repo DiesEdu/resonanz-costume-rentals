@@ -54,8 +54,9 @@ function getCostumesCount(string $category = '', string $search = ''): int
     }
 
     if ($search) {
-        $sql .= ' AND (c.name LIKE :search OR c.category LIKE :search OR c.description LIKE :search)';
-        $params[':search'] = '%' . $search . '%';
+        $sql .= ' AND (c.name LIKE :search_name OR c.group_category LIKE :search_category)';
+        $params[':search_name'] = '%' . $search . '%';
+        $params[':search_category'] = '%' . $search . '%';
     }
 
     $stmt = $db->prepare($sql);
@@ -80,8 +81,9 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
     }
 
     if ($search) {
-        $sql .= ' AND (c.name LIKE :search OR c.category LIKE :search OR c.description LIKE :search)';
-        $params[':search'] = '%' . $search . '%';
+        $sql .= ' AND (c.name LIKE :search_name OR c.group_category LIKE :search_category)';
+        $params[':search_name'] = '%' . $search . '%';
+        $params[':search_category'] = '%' . $search . '%';
     }
 
     $sql .= ' GROUP BY c.id 
