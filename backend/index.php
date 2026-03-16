@@ -133,6 +133,16 @@ switch ($resource) {
         require __DIR__ . '/api/drive.php';
         break;
 
+    case 'customers':
+        if (is_numeric($idOrSub)) {
+            $_GET['action'] = 'get';
+            $_GET['id'] = $idOrSub;
+        } else {
+            $_GET['action'] = 'list';
+        }
+        require __DIR__ . '/api/customers.php';
+        break;
+
     default:
         http_response_code(404);
         echo json_encode([

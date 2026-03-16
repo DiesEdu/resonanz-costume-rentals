@@ -1,6 +1,6 @@
 <?php
 // api/middleware/AuthMiddleware.php
-namespace SheetMusic\Middleware;
+namespace CostumeRental\Middleware;
 
 require_once __DIR__ . '/../config/database.php';
 

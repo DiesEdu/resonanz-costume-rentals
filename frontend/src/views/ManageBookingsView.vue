@@ -81,7 +81,6 @@
                           border-radius: 10px;
                         "
                       />
-                      <img :src="booking.costumeImage" :alt="booking.costumeName" class="thumb" />
                     </div>
                     <div>
                       <div class="fw-semibold">{{ booking.costumeName }}</div>
@@ -92,7 +91,7 @@
                   </div>
                 </td>
                 <td>
-                  <div class="fw-semibold">{{ booking.customerName }}</div>
+                  <div class="fw-semibold">{{ bookingCustNames[booking.customerId] }}</div>
                   <div class="small">{{ booking.email }}</div>
                   <div class="small">{{ booking.phone }}</div>
                 </td>
@@ -154,6 +153,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
 import { useCostumesStore } from '@/stores/costumes'
+import { useCustomersStore } from '@/stores/customers'
 import { useRouter } from 'vue-router'
 
 import LazyDriveImage from '@/components/LazyDriveImage.vue'
@@ -161,6 +161,7 @@ import LazyDriveImage from '@/components/LazyDriveImage.vue'
 const bookingsStore = useBookingsStore()
 const authStore = useAuthStore()
 const costumesStore = useCostumesStore()
+const customersStore = useCustomersStore()
 const router = useRouter()
 const statusFilter = ref('all')
 const isActing = ref(false)
@@ -168,6 +169,7 @@ const actingRole = computed(() => authStore.role || 'costume_management')
 
 // Map to store image URLs for each booking
 const bookingImageUrls = ref({})
+const bookingCustNames = ref({})
 
 const refresh = () => bookingsStore.fetchBookingsManager()
 
@@ -218,18 +220,24 @@ onMounted(async () => {
     return
   }
   await bookingsStore.fetchBookingsManager()
+  await customersStore.fetchCustomers()
 
   // Load image URLs for all bookings
   const loadedBookings = bookingsStore.manageBookings
-  console.log('loaded bookings: ', loadedBookings)
+  const users = customersStore.customers
   for (const booking of loadedBookings) {
     const imageName = booking.costumeImage || booking.costumeName
     if (imageName) {
       const url = await costumesStore.getDriveImageUrl(imageName)
       bookingImageUrls.value[booking.id] = url
     }
+
+    const custId = booking.customerId
+    if (custId) {
+      const user = users.find((u) => u.id === 1)
+      bookingCustNames.value[booking.customerId] = user.name
+    }
   }
-  console.log('booking image urls: ', bookingImageUrls.value)
 })
 
 const statCards = computed(() => [
@@ -264,7 +272,7 @@ const statCards = computed(() => [
 ])
 
 function filteredCount(status) {
-  return bookingsStore.bookings.filter((b) => b.status === status).length
+  return bookingsStore.manageBookings.filter((b) => b.status === status).length
 }
 </script>
 
