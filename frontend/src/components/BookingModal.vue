@@ -230,7 +230,11 @@ const hide = () => {
 const submitBooking = () => {
   if (!authStore.isLoggedIn) {
     showToast('Please sign in to continue your booking.', 'warning', 'bi-person-exclamation')
-    setTimeout(() => router.push('/login'), 800)
+    hide()
+    setTimeout(() => {
+      router.push('/login')
+      window.scrollTo(0, 0)
+    }, 800)
     return
   }
 
