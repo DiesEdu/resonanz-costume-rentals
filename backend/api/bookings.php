@@ -192,7 +192,7 @@ function createBooking(): void
         SELECT COALESCE(SUM(amount_book), 0) AS total_booked
         FROM bookings
         WHERE costume_id = :costume_id
-        AND status NOT IN ("cancelled", "completed", "returned")
+        AND status NOT IN ("cancelled", "returned")
         AND start_date <= :end_date
         AND end_date >= :start_date
     ');

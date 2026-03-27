@@ -69,9 +69,15 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
 {
     $db = getDB();
 
-    $sql = 'SELECT c.*, COALESCE(SUM(cs.quantity),0) AS quantity
+    $sql = 'SELECT c.*, (COALESCE(SUM(cs.quantity),0) - COALESCE(ob.total_booked,0)) AS quantity
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
+        LEFT JOIN (
+            SELECT costume_id, SUM(amount_book) AS total_booked
+            FROM bookings
+            WHERE status IN ("waiting_approval","processing","completed")
+            GROUP BY costume_id
+        ) ob ON ob.costume_id = c.id
         WHERE 1 = 1';
     $params = [];
 
@@ -86,7 +92,7 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
         $params[':search_category'] = '%' . $search . '%';
     }
 
-    $sql .= ' GROUP BY c.id 
+    $sql .= ' GROUP BY c.id, ob.total_booked 
               ORDER BY c.id 
               LIMIT :limit OFFSET :offset';
 
@@ -150,11 +156,17 @@ function getCostume(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT c.*, COALESCE(SUM(cs.quantity),0) AS quantity
+        'SELECT c.*, (COALESCE(SUM(cs.quantity),0) - COALESCE(ob.total_booked,0)) AS quantity
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
+        LEFT JOIN (
+            SELECT costume_id, SUM(amount_book) AS total_booked
+            FROM bookings
+            WHERE status IN ("waiting_approval","processing","completed")
+            GROUP BY costume_id
+        ) ob ON ob.costume_id = c.id
         WHERE c.id = :id
-        GROUP BY c.id;'
+        GROUP BY c.id, ob.total_booked;'
     );
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
@@ -289,7 +301,7 @@ function formatCostume(array $row): array
         'group_category' => $row['group_category'],
         'rack_id' => $row['rack_id'],
         'size' => $row['size'],
-        'quantity' => $row['quantity'],
+        'quantity' => max(0, (int) $row['quantity']),
         'image' => $row['image'],
     ];
 }

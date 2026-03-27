@@ -253,6 +253,8 @@ const submitBooking = () => {
   hide()
   emit('booked')
 
+  bookingsStore.fetchBookings()
+
   // Reset form
   startDate.value = ''
   endDate.value = ''
