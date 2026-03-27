@@ -192,7 +192,7 @@ function createBooking(): void
         SELECT COALESCE(SUM(amount_book), 0) AS total_booked
         FROM bookings
         WHERE costume_id = :costume_id
-        AND status NOT IN ("cancelled", "completed")
+        AND status NOT IN ("cancelled", "completed", "returned")
         AND start_date <= :end_date
         AND end_date >= :start_date
     ');
@@ -278,9 +278,9 @@ function cancelBooking(int $id): void
         return;
     }
 
-    if ($existing['status'] === 'completed') {
+    if (in_array($existing['status'], ['completed', 'returned'], true)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Completed bookings cannot be cancelled']);
+        echo json_encode(['error' => 'Completed or returned bookings cannot be cancelled']);
         return;
     }
 
@@ -304,7 +304,7 @@ function updateBookingStatus(int $id): void
     $body = json_decode(file_get_contents('php://input'), true) ?: [];
     $newStatus = $body['status'] ?? '';
 
-    $validStatuses = ['waiting_approval', 'processing', 'completed', 'cancelled'];
+    $validStatuses = ['waiting_approval', 'processing', 'completed', 'returned', 'cancelled'];
     if (!in_array($newStatus, $validStatuses, true)) {
         http_response_code(422);
         echo json_encode(['error' => 'Invalid status value']);
@@ -331,7 +331,8 @@ function updateBookingStatus(int $id): void
     $transitions = [
         'waiting_approval' => ['processing', 'cancelled'],
         'processing' => ['completed', 'cancelled'],
-        'completed' => [],
+        'completed' => ['returned'],
+        'returned' => [],
         'cancelled' => [],
     ];
 

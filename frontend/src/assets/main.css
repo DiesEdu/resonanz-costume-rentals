@@ -645,6 +645,10 @@ h5 {
   background: #dcfce7;
   color: #166534;
 }
+.status-returned {
+  background: #e0f2f1;
+  color: #0f766e;
+}
 .status-cancelled {
   background: #fee2e2;
   color: #b91c1c;

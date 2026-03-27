@@ -24,6 +24,7 @@
               <option class="text-muted" value="waiting_approval">Waiting Approval</option>
               <option class="text-muted" value="processing">Processing</option>
               <option class="text-muted" value="completed">Completed</option>
+              <option class="text-muted" value="returned">Returned</option>
               <option class="text-muted" value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -106,29 +107,45 @@
                 </td>
                 <td class="text-end">
                   <div class="btn-stack">
-                    <button
-                      class="btn btn-outline-primary btn-sm"
-                      :disabled="booking.status !== 'waiting_approval' || isActing"
-                      @click="changeStatus(booking, 'processing')"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      class="btn btn-outline-success btn-sm"
-                      :disabled="booking.status !== 'processing' || isActing"
-                      @click="changeStatus(booking, 'completed')"
-                    >
-                      Complete
-                    </button>
-                    <button
-                      class="btn btn-outline-danger btn-sm"
-                      :disabled="
-                        !['waiting_approval', 'processing'].includes(booking.status) || isActing
-                      "
-                      @click="cancel(booking)"
-                    >
-                      Cancel
-                    </button>
+                    <template v-if="booking.status === 'waiting_approval'">
+                      <button
+                        class="btn btn-outline-primary btn-sm"
+                        :disabled="isActing"
+                        @click="changeStatus(booking, 'processing')"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        class="btn btn-outline-danger btn-sm"
+                        :disabled="isActing"
+                        @click="cancel(booking)"
+                      >
+                        Cancel
+                      </button>
+                    </template>
+
+                    <template v-else-if="booking.status === 'processing'">
+                      <button
+                        class="btn btn-outline-success btn-sm"
+                        :disabled="isActing"
+                        @click="changeStatus(booking, 'completed')"
+                      >
+                        Complete
+                      </button>
+                      <button class="btn btn-outline-danger btn-sm" :disabled="isActing" @click="cancel(booking)">
+                        Cancel
+                      </button>
+                    </template>
+
+                    <template v-else-if="booking.status === 'completed'">
+                      <button
+                        class="btn btn-outline-secondary btn-sm"
+                        :disabled="isActing"
+                        @click="markReturned(booking)"
+                      >
+                        Return
+                      </button>
+                    </template>
                   </div>
                 </td>
               </tr>
@@ -219,6 +236,17 @@ const cancel = async (booking) => {
   }
 }
 
+const markReturned = async (booking) => {
+  if (!confirm(`Mark ${booking.costumeName} as returned?`)) return
+  isActing.value = true
+  try {
+    await bookingsStore.updateStatus(booking.id, 'returned')
+  } finally {
+    bookingsStore.fetchBookingsManager()
+    isActing.value = false
+  }
+}
+
 onMounted(async () => {
   const allowedRoles = ['costume_management', 'admin']
   if (!allowedRoles.includes(authStore.userRole)) {
@@ -270,11 +298,18 @@ const statCards = computed(() => [
     index: 2,
   },
   {
+    key: 'returned',
+    label: 'Returned',
+    value: filteredCount('returned'),
+    class: 'dot-returned',
+    index: 3,
+  },
+  {
     key: 'cancelled',
     label: 'Cancelled',
     value: filteredCount('cancelled'),
     class: 'dot-cancelled',
-    index: 3,
+    index: 4,
   },
 ])
 
@@ -361,6 +396,9 @@ function filteredCount(status) {
 }
 .dot-completed {
   background: #166534;
+}
+.dot-returned {
+  background: #0f766e;
 }
 .dot-cancelled {
   background: #b91c1c;
