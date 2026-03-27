@@ -118,11 +118,10 @@ export const useBookingsStore = defineStore('bookings', () => {
   }
 
   // ── Update booking status (management/admin) ────────────────────────────────
-  const updateStatus = async (id, status, role = '') => {
+  const updateStatus = async (id, status) => {
     error.value = null
     try {
-      const headers = { 'Content-Type': 'application/json' }
-      if (role) headers['X-Role'] = role
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 
       const res = await fetch(`${API_BASE}/api/bookings/${id}/status`, {
         method: 'PUT',

@@ -194,10 +194,15 @@ const formatStatus = (status) =>
     .join(' ')
 
 const changeStatus = async (booking, status) => {
+  if (
+    !confirm(`Approve ${booking.costumeName} from ${bookingCustNames.value[booking.customerId]}?`)
+  )
+    return
   try {
     isActing.value = true
-    await bookingsStore.updateStatus(booking.id, status, actingRole.value)
+    await bookingsStore.updateStatus(booking.id, status)
   } finally {
+    bookingsStore.fetchBookingsManager()
     isActing.value = false
   }
 }
@@ -208,6 +213,8 @@ const cancel = async (booking) => {
   try {
     await bookingsStore.cancelBooking(booking.id)
   } finally {
+    alert('Booking cancelled')
+    bookingsStore.fetchBookingsManager()
     isActing.value = false
   }
 }
@@ -234,7 +241,7 @@ onMounted(async () => {
 
     const custId = booking.customerId
     if (custId) {
-      const user = users.find((u) => u.id === 1)
+      const user = users.find((u) => u.id === custId)
       bookingCustNames.value[booking.customerId] = user.name
     }
   }

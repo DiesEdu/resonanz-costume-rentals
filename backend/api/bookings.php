@@ -284,12 +284,6 @@ function cancelBooking(int $id): void
         return;
     }
 
-    if ((int) $existing['customer_id'] !== (int) ($user['id'] ?? 0)) {
-        http_response_code(403);
-        echo json_encode(['error' => 'You can only cancel your own bookings']);
-        return;
-    }
-
     $db->prepare('UPDATE bookings SET status = "cancelled" WHERE id = :id')
         ->execute([':id' => $id]);
 
