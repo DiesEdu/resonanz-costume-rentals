@@ -88,6 +88,12 @@
                       <div class="small">
                         Size: <span class="fst-italic">{{ booking.costumeSize }}</span>
                       </div>
+                      <div>
+                        <p class="text-muted mb-1" style="font-size: 0.85rem">
+                          <i class="bi bi-archive me-1" style="color: var(--gold)"></i> Total Rent:
+                          <span>({{ booking.amount }})</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -132,7 +138,11 @@
                       >
                         Complete
                       </button>
-                      <button class="btn btn-outline-danger btn-sm" :disabled="isActing" @click="cancel(booking)">
+                      <button
+                        class="btn btn-outline-danger btn-sm"
+                        :disabled="isActing"
+                        @click="cancel(booking)"
+                      >
                         Cancel
                       </button>
                     </template>
@@ -169,7 +179,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAuthStore } from '@/stores/auth'
-import { useCostumesStore } from '@/stores/costumes'
 import { useCustomersStore } from '@/stores/customers'
 import { useRouter } from 'vue-router'
 
@@ -177,7 +186,6 @@ import LazyDriveImage from '@/components/LazyDriveImage.vue'
 
 const bookingsStore = useBookingsStore()
 const authStore = useAuthStore()
-const costumesStore = useCostumesStore()
 const customersStore = useCustomersStore()
 const router = useRouter()
 const statusFilter = ref('all')
@@ -263,7 +271,7 @@ onMounted(async () => {
   for (const booking of loadedBookings) {
     const imageName = booking.costumeImage || booking.costumeName
     if (imageName) {
-      const url = await costumesStore.getDriveImageUrl(imageName)
+      const url = `https://drive.google.com/thumbnail?id=${imageName}&sz=w1200`
       bookingImageUrls.value[booking.id] = url
     }
 

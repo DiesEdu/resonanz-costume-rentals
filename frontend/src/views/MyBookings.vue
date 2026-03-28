@@ -49,6 +49,10 @@
                 <i class="bi bi-rulers me-1" style="color: var(--gold)"></i> Size:
                 <span class="fst-italic">{{ booking.costumeSize }}</span>
               </p>
+              <p class="text-muted mb-1" style="font-size: 0.85rem">
+                <i class="bi bi-archive me-1" style="color: var(--gold)"></i> Total Rent:
+                <span>({{ booking.amount }})</span>
+              </p>
               <p class="text-muted mb-0" style="font-size: 0.85rem">
                 <i class="bi bi-calendar3 me-1" style="color: var(--gold)"></i>
                 {{ formatDate(booking.startDate) }} – {{ formatDate(booking.endDate) }}
@@ -116,11 +120,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
-import { useCostumesStore } from '@/stores/costumes'
 import LazyDriveImage from '@/components/LazyDriveImage.vue'
 
 const bookingsStore = useBookingsStore()
-const costumesStore = useCostumesStore()
 const bookings = computed(() => bookingsStore.getUserBookings())
 const cancelModal = reactive({ open: false, bookingId: null })
 
@@ -165,7 +167,7 @@ onMounted(async () => {
   for (const booking of loadedBookings) {
     const imageName = booking.costumeImage || booking.costumeName
     if (imageName) {
-      const url = await costumesStore.getDriveImageUrl(imageName)
+      const url = `https://drive.google.com/thumbnail?id=${imageName}&sz=w1200`
       bookingImageUrls.value[booking.id] = url
     }
   }

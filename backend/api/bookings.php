@@ -64,12 +64,29 @@ function listBookings(): void
     $db = getDB();
     $customerId = $user['id'] ?? 0;
 
-    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, 
-            GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS costume_size
-            FROM bookings b
-            LEFT JOIN costumes c ON c.id = b.costume_id
-            LEFT JOIN costume_stock cs ON cs.costume_id = c.id
-            WHERE 1=1';
+    $sql = 'SELECT 
+            b.id,
+            cs.costume_id,
+            b.customer_id,
+            b.start_date,
+            b.end_date,
+            b.amount_book,
+            b.status,
+            b.booking_date,
+            c.image AS costume_image,
+            c.name AS costume_name,
+            cs.size AS costume_size,
+            (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS costume_quantity
+        FROM bookings b
+        LEFT JOIN costume_stock cs ON cs.id = b.costume_stock_id
+        LEFT JOIN costumes c ON c.id = cs.costume_id
+        LEFT JOIN (
+            SELECT costume_stock_id, SUM(amount_book) AS total_booked
+            FROM bookings
+            WHERE status IN ("waiting_approval","processing","completed")
+            GROUP BY costume_stock_id
+        ) ob ON ob.costume_stock_id = cs.id
+        WHERE 1=1';
     $params = [];
 
     if ($customerId > 0) {
@@ -95,12 +112,29 @@ function listBookingsForManager(): void
     }
     $db = getDB();
 
-    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, 
-            GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS costume_size
-            FROM bookings b
-            LEFT JOIN costumes c ON c.id = b.costume_id
-            LEFT JOIN costume_stock cs ON cs.costume_id = c.id
-            WHERE 1=1';
+    $sql = 'SELECT 
+            b.id,
+            cs.costume_id,
+            b.customer_id,
+            b.start_date,
+            b.end_date,
+            b.amount_book,
+            b.status,
+            b.booking_date,
+            c.image AS costume_image,
+            c.name AS costume_name,
+            cs.size AS costume_size,
+            (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS costume_quantity
+        FROM bookings b
+        LEFT JOIN costume_stock cs ON cs.id = b.costume_stock_id
+        LEFT JOIN costumes c ON c.id = cs.costume_id
+        LEFT JOIN (
+            SELECT costume_stock_id, SUM(amount_book) AS total_booked
+            FROM bookings
+            WHERE status IN ("waiting_approval","processing","completed")
+            GROUP BY costume_stock_id
+        ) ob ON ob.costume_stock_id = cs.id
+        WHERE 1=1';
     $params = [];
 
     $sql .= ' ORDER BY b.booking_date DESC, b.id DESC';
@@ -121,13 +155,29 @@ function getBooking(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT b.*, c.image AS costume_image, c.name AS costume_name,
-         GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS costume_size
+        'SELECT 
+            b.id,
+            b.costume_id,
+            b.customer_id,
+            b.start_date,
+            b.end_date,
+            b.amount_book,
+            b.status,
+            b.booking_date,
+            c.image AS costume_image,
+            c.name AS costume_name,
+            cs.size AS costume_size,
+            (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS costume_quantity
          FROM bookings b
          LEFT JOIN costumes c ON c.id = b.costume_id
          LEFT JOIN costume_stock cs ON cs.costume_id = c.id
-         WHERE b.id = :id
-         GROUP BY b.id'
+         LEFT JOIN (
+            SELECT costume_stock_id, SUM(amount_book) AS total_booked
+            FROM bookings
+            WHERE status IN ("waiting_approval","processing","completed")
+            GROUP BY costume_stock_id
+         ) ob ON ob.costume_stock_id = cs.id
+         WHERE b.id = :id'
     );
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
@@ -320,9 +370,10 @@ function updateBookingStatus(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT b.*, c.image AS costume_image
+        'SELECT b.*, c.image AS costume_image, cs.costume_id
          FROM bookings b
-         LEFT JOIN costumes c ON c.id = b.costume_id
+         LEFT JOIN costume_stock cs ON cs.id = b.costume_stock_id
+         LEFT JOIN costumes c ON c.id = cs.costume_id
          WHERE b.id = :id'
     );
     $stmt->execute([':id' => $id]);
@@ -376,5 +427,6 @@ function formatBooking(array $row): array
         'costumeImage' => $row['costume_image'] ?? null,
         'costumeName' => $row['costume_name'] ?? null,
         'costumeSize' => $row['costume_size'] ?? null,
+        'costumeQuantity' => isset($row['costume_quantity']) ? (int) $row['costume_quantity'] : null,
     ];
 }
