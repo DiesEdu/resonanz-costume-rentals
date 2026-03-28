@@ -317,9 +317,10 @@ function cancelBooking(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT b.*, c.image AS costume_image
+        'SELECT b.*, c.image AS costume_image, cs.costume_id
          FROM bookings b
-         LEFT JOIN costumes c ON c.id = b.costume_id
+         LEFT JOIN costume_stock cs ON cs.id = b.costume_stock_id
+         LEFT JOIN costumes c ON c.id = cs.costume_id
          WHERE b.id = :id'
     );
     $stmt->execute([':id' => $id]);
