@@ -69,17 +69,23 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
 {
     $db = getDB();
 
-    $sql = 'SELECT c.*, 
-            (COALESCE(SUM(cs.quantity),0) - COALESCE(ob.total_booked,0)) AS quantity,
-            GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS sizes
+    $sql = 'SELECT 
+            c.id,
+            c.name,
+            c.costume_code,
+            c.group_category,
+            c.rack_id,
+            c.image,
+            cs.size,
+            (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS quantity
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
         LEFT JOIN (
-            SELECT costume_id, SUM(amount_book) AS total_booked
+            SELECT costume_stock_id, SUM(amount_book) AS total_booked
             FROM bookings
             WHERE status IN ("waiting_approval","processing","completed")
-            GROUP BY costume_id
-        ) ob ON ob.costume_id = c.id
+            GROUP BY costume_stock_id
+        ) ob ON ob.costume_stock_id = cs.id
         WHERE 1 = 1';
     $params = [];
 
@@ -94,8 +100,7 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
         $params[':search_category'] = '%' . $search . '%';
     }
 
-    $sql .= ' GROUP BY c.id, ob.total_booked 
-              ORDER BY c.id 
+    $sql .= ' ORDER BY c.id 
               LIMIT :limit OFFSET :offset';
 
     $stmt = $db->prepare($sql);
@@ -109,7 +114,7 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
 
     $stmt->execute();
 
-    return $stmt->fetchAll();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function listCostumes(): void
@@ -132,9 +137,32 @@ function listCostumes(): void
     // Get paginated data
     $rows = getCostumesPaginated($perPage, $offset, $category, $search);
 
+    // Group rows by costume and build sizes array
+    $costumes = [];
+    foreach ($rows as $row) {
+        $costumeId = $row['id'];
+        if (!isset($costumes[$costumeId])) {
+            $costumes[$costumeId] = [
+                'id' => (int) $row['id'],
+                'name' => $row['name'],
+                'costume_code' => $row['costume_code'],
+                'group_category' => $row['group_category'],
+                'rack_id' => $row['rack_id'],
+                'image' => $row['image'],
+                'sizes' => []
+            ];
+        }
+        if ($row['size'] !== null) {
+            $costumes[$costumeId]['sizes'][] = [
+                'size' => $row['size'],
+                'quantity' => (int) $row['quantity']
+            ];
+        }
+    }
+
     // Build response
     $response = [
-        'data' => array_map('formatCostume', $rows),
+        'data' => array_values($costumes),
         'pagination' => [
             'current_page' => $page,
             'per_page' => $perPage,
@@ -187,15 +215,6 @@ function getCostume(int $id): void
         return;
     }
 
-    // Build structured response
-    // 'id' => (int) $row['id'],
-    //     'name' => $row['name'],
-    //     'costume_code' => $row['costume_code'],
-    //     'group_category' => $row['group_category'],
-    //     'rack_id' => $row['rack_id'],
-    //     'sizes' => $row['sizes'] ?? '',
-    //     'quantity' => max(0, (int) $row['quantity']),
-    //     'image' => $row['image'],
     $costume = [
         'id' => $rows[0]['id'],
         'name' => $rows[0]['name'],

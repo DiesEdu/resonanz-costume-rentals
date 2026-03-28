@@ -53,9 +53,6 @@
 
           <h3>
             <span class="fst-italic">{{ costume.costume_code }}</span>
-            <span class="text-muted ms-2" style="font-size: 0.7em">
-              - ({{ costume.quantity }}) Availability</span
-            >
           </h3>
 
           <hr class="hr-gold" style="margin: 1.5rem 0" />
@@ -76,8 +73,8 @@
           <div class="mb-4">
             <p class="section-eyebrow mb-3">Available Sizes</p>
             <div class="d-flex gap-2 flex-wrap">
-              <span v-for="size in parseSizes(costume.sizes)" :key="size" class="size-chip">{{
-                size
+              <span v-for="size in costume.sizes" :key="size" class="size-chip">{{
+                parseSizeVal(size)
               }}</span>
             </div>
           </div>
@@ -128,18 +125,8 @@ const bookingModal = ref(null)
 const costume = ref(null)
 const imageUrl = ref(null)
 
-function parseSizes(sizes) {
-  if (!sizes) return []
-  if (Array.isArray(sizes)) return sizes
-  try {
-    return JSON.parse(sizes)
-  } catch {
-    // Split by comma and trim each item
-    return sizes
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s)
-  }
+function parseSizeVal(size) {
+  return `${size.size} (${size.quantity})`
 }
 
 onMounted(async () => {

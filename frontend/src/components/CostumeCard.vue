@@ -18,31 +18,23 @@
     </div>
 
     <div class="card-body d-flex flex-column">
-      <!-- <div class="mb-1">
-        <small class="text-warning fw-bold">
-          <i class="bi bi-star-fill"></i> {{ costume.rating }}
-        </small>
-        <small class="text-muted ms-1">({{ costume.reviews }})</small>
-      </div> -->
-
       <h5 class="card-title mb-2 fw-bold">{{ costume.name }}</h5>
       <h5>
         <span class="fst-italic">{{ costume.costume_code }}</span>
-        <span class="text-muted ms-2" style="font-size: 0.7em"> - ({{ costume.quantity }})</span>
       </h5>
-
-      <!-- <p class="card-text text-muted small flex-grow-1" style="line-height: 1.6">
-        {{ truncatedDescription }}
-      </p> -->
+      <small class="text-muted">
+        <i class="bi bi-rulers me-1" style="color: var(--gold)"> </i>
+        <div class="wrap-size">
+          <span v-for="size in costume.sizes" :key="size" class="size-chip">{{
+            parseSizeVal(size)
+          }}</span>
+        </div>
+      </small>
 
       <div
         class="d-flex align-items-center justify-content-between mt-3 pt-3"
         style="border-top: 1px solid rgba(201, 168, 76, 0.15)"
       >
-        <small class="text-muted">
-          <i class="bi bi-rulers me-1" style="color: var(--gold)"></i
-          >{{ parseSizes(costume.sizes).join(', ') }}
-        </small>
         <router-link :to="`/costume/${costume.id}`" class="btn btn-outline-primary btn-sm">
           Details <i class="bi bi-arrow-right ms-1"></i>
         </router-link>
@@ -63,24 +55,8 @@ defineEmits(['book'])
 
 const imageUrl = ref(null)
 
-// const truncatedDescription = computed(() =>
-//   props.costume.description?.length > 90
-//     ? props.costume.description.substring(0, 90) + '…'
-//     : props.costume.description,
-// )
-
-function parseSizes(sizes) {
-  if (!sizes) return []
-  if (Array.isArray(sizes)) return sizes
-  try {
-    return JSON.parse(sizes)
-  } catch {
-    // Split by comma and trim each item
-    return sizes
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s)
-  }
+function parseSizeVal(size) {
+  return `${size.size} (${size.quantity})`
 }
 
 onMounted(async () => {
@@ -89,6 +65,39 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.text-muted {
+  display: flex;
+  flex-direction: row;
+  justify-content: start;
+  align-items: center;
+}
+
+.wrap-size {
+  display: flex;
+  flex-wrap: wrap; /* 🔥 THIS is the key */
+  justify-content: start;
+  align-items: center;
+  gap: 6px; /* optional spacing between chips */
+}
+
+.size-chip {
+  margin: 0 5px;
+  padding: 4px 8px;
+  border: 1px solid rgba(201, 168, 76, 0.4);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--charcoal-2);
+  cursor: default;
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+.size-chip:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--charcoal);
+}
+
 .card-img-hover-overlay {
   position: absolute;
   inset: 0;
