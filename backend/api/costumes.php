@@ -2,6 +2,11 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
+// Load Drive helpers without running its router
+if (!defined('DRIVE_LIBRARY_ONLY')) {
+    define('DRIVE_LIBRARY_ONLY', true);
+}
+require_once __DIR__ . '/drive.php';
 
 use CostumeRental\Middleware\AuthMiddleware;
 
@@ -251,8 +256,8 @@ function createCostume(): void
 
     $name = trim($body['name'] ?? '');
     $costume_code = trim($body['costume_code'] ?? '');
-    $group_category_id = trim($body['group_category_id'] ?? '');
-    $rack_id = trim($body['rack_id'] ?? '');
+    $group_category_id = trim($body['category'] ?? '');
+    $rack_id = trim($body['rack_id'] ?? '0');
     $sizeStocks = $body['sizeStocks'] ?? [];
 
     $imagePath = trim($body['image'] ?? '');
@@ -274,7 +279,7 @@ function createCostume(): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, costume_code, group_category_id, rack_id, image)
+        'INSERT INTO costumes (name, costume_code, group_category, rack_id, image)
          VALUES (:name, :costume_code, :group_category_id, :rack_id, :image)'
     );
     $stmt->execute([
@@ -287,15 +292,21 @@ function createCostume(): void
 
     $costumeId = (int) $db->lastInsertId();
 
-    // Insert sizes into costume_stock table
+    if (is_string($sizeStocks)) {
+        $sizeStocks = stripslashes($sizeStocks); // 🔥 FIX
+        $sizeStocks = json_decode($sizeStocks, true);
+    }
+
     if (is_array($sizeStocks) && count($sizeStocks) > 0) {
         $sizeStmt = $db->prepare(
             'INSERT INTO costume_stock (costume_id, quantity, size) VALUES (:costume_id, :quantity, :size)'
         );
+
         foreach ($sizeStocks as $item) {
             $size = trim($item['size'] ?? '');
-            $stock = intval($item['stock'] ?? 0);
-            if ($size) {
+            $stock = (int) ($item['stock'] ?? 0);
+
+            if ($size !== '') {
                 $sizeStmt->execute([
                     ':costume_id' => $costumeId,
                     ':quantity' => $stock,
@@ -335,20 +346,21 @@ function handleImageUpload(array $file): array
         return ['ok' => false, 'error' => 'Only JPG, PNG, or WebP images are allowed.'];
     }
 
-    $uploadDir = __DIR__ . '/../upload/img';
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
-        return ['ok' => false, 'error' => 'Unable to create upload directory.'];
+    $targetName = uniqid('costume_', true) . '.' . $allowed[$mime];
+    $folderId = getFolderId(); // Uses env GOOGLE_DRIVE_FOLDER_ID by default
+
+    $driveResult = driveUploadFromArray($file, $targetName, $folderId);
+    if (!$driveResult['ok']) {
+        return ['ok' => false, 'error' => $driveResult['error']];
     }
 
-    $filename = uniqid('costume_', true) . '.' . $allowed[$mime];
-    $targetPath = $uploadDir . '/' . $filename;
-
-    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-        return ['ok' => false, 'error' => 'Failed to save uploaded file.'];
+    // Prefer storing Drive file ID (frontend builds thumbnail URL from it)
+    $fileId = $driveResult['data']['id'] ?? null;
+    if (!$fileId) {
+        return ['ok' => false, 'error' => 'Drive upload succeeded but no file ID returned.'];
     }
 
-    $relative = 'upload/img/' . $filename;
-    return ['ok' => true, 'path' => buildPublicPath($relative)];
+    return ['ok' => true, 'path' => $fileId];
 }
 
 /**

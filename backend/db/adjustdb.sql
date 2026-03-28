@@ -72,3 +72,5 @@ FOREIGN KEY (costume_stock_id) REFERENCES costume_stock(id) ON DELETE CASCADE;
 ALTER TABLE bookings
 DROP FOREIGN KEY bookings_ibfk_1;
 ALTER TABLE bookings DROP COLUMN costume_id;
+
+ALTER TABLE costumes ADD COLUMN description TEXT AFTER image;

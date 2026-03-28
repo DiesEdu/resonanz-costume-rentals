@@ -13,39 +13,53 @@ require_once __DIR__ . '/../config/database.php'; // loads .env so GOOGLE_API_KE
  *
  * POST /api/drive/files/batch
  * - form-data with file: Excel file containing 'fileName' column
+ *
+ * GET /api/drive/token
+ * - returns short-lived access_token generated from refresh token
+ *
+ * POST /api/drive/upload
+ * - form-data with file: binary file to upload
+ * - optional: name (override filename), folder (parent folder id)
  * 
  * Uses env GOOGLE_API_KEY (set in backend/.env). Response is a thin wrapper
  * around the Drive v3 `files` list endpoint.
  */
 
-$method = $_SERVER['REQUEST_METHOD'];
-$action = $_GET['action'] ?? 'files';
+// When included as a library, skip routing.
+if (!defined('DRIVE_LIBRARY_ONLY')) {
+    $method = $_SERVER['REQUEST_METHOD'];
+    $action = $_GET['action'] ?? 'files';
 
-switch ($method) {
-    case 'GET':
-        if ($action === 'files') {
-            fetchDriveFiles();
-        } else {
-            http_response_code(404);
-            echo json_encode(['error' => 'Unknown action']);
-        }
-        break;
+    switch ($method) {
+        case 'GET':
+            if ($action === 'files') {
+                fetchDriveFiles();
+            } elseif ($action === 'token') {
+                fetchAccessToken();
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Unknown action']);
+            }
+            break;
 
-    case 'POST':
-        if ($action === 'files/batch') {
-            batchFetchDriveFiles();
-        } elseif ($action === 'update-img-id') {
-            processUpdateImgId();
-        } else {
-            http_response_code(404);
-            echo json_encode(['error' => 'Unknown action']);
-        }
-        break;
+        case 'POST':
+            if ($action === 'files/batch') {
+                batchFetchDriveFiles();
+            } elseif ($action === 'update-img-id') {
+                processUpdateImgId();
+            } elseif ($action === 'upload') {
+                uploadDriveFile();
+            } else {
+                http_response_code(404);
+                echo json_encode(['error' => 'Unknown action']);
+            }
+            break;
 
-    default:
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed']);
-        break;
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            break;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -360,9 +374,16 @@ function validateApiKey(): ?string
     return $apiKey;
 }
 
-function getFolderId(): string
+function getFolderId(string $preferred = ''): string
 {
-    $folder = trim($_GET['folder'] ?? '');
+    // Accept folder from either parameter, query string, or form body for flexibility
+    $folder = trim($preferred);
+    if ($folder === '') {
+        $folder = trim($_GET['folder'] ?? '');
+    }
+    if ($folder === '') {
+        $folder = trim($_POST['folder'] ?? '');
+    }
     if ($folder === '') {
         $folder = trim(getenv('GOOGLE_DRIVE_FOLDER_ID') ?: '');
     }
@@ -472,4 +493,246 @@ function driveHttpGet(string $url): array
     ];
 }
 
+/**
+ * GET /api/drive/token
+ * Handy endpoint to fetch a fresh access_token using refresh token.
+ * Avoid exposing this in production unless protected.
+ */
+function fetchAccessToken(): void
+{
+    $tokenResult = fetchAccessTokenFromRefreshToken();
+    if (!$tokenResult['ok']) {
+        http_response_code($tokenResult['status']);
+        echo json_encode(['error' => $tokenResult['error']]);
+        return;
+    }
 
+    http_response_code(200);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'access_token' => $tokenResult['access_token'],
+        'expires_in' => $tokenResult['expires_in'],
+        'token_type' => 'Bearer',
+    ], JSON_PRETTY_PRINT);
+}
+
+/**
+ * POST /api/drive/upload
+ * Upload a single file to Google Drive using OAuth2 (refresh_token flow).
+ */
+function uploadDriveFile(): void
+{
+    // Allow larger uploads some extra time (default 30s)
+    @set_time_limit(180);
+
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Form-data field "file" is required']);
+        return;
+    }
+
+    $file = $_FILES['file'];
+    $originalName = $file['name'] ?? 'upload.bin';
+    $targetName = trim($_POST['name'] ?? '') ?: $originalName;
+    $folderId = getFolderId(); // already reads POST/GET/env
+
+    $result = driveUploadFromArray($file, $targetName, $folderId);
+
+    if (!$result['ok']) {
+        http_response_code($result['status']);
+        echo json_encode(['error' => $result['error']]);
+        return;
+    }
+
+    http_response_code(201);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => true,
+        'file' => $result['data'],
+    ], JSON_PRETTY_PRINT);
+}
+
+/**
+ * Exchange refresh token for a short-lived access token.
+ */
+function fetchAccessTokenFromRefreshToken(): array
+{
+    $clientId = getenv('GOOGLE_CLIENT_ID') ?: '';
+    $clientSecret = getenv('GOOGLE_CLIENT_SECRET') ?: '';
+    $refreshToken = getenv('GOOGLE_DRIVE_REFRESH_TOKEN') ?: '';
+
+    if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
+        return [
+            'ok' => false,
+            'status' => 500,
+            'error' => 'GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_DRIVE_REFRESH_TOKEN is missing',
+        ];
+    }
+
+    $payload = http_build_query([
+        'client_id' => $clientId,
+        'client_secret' => $clientSecret,
+        'refresh_token' => $refreshToken,
+        'grant_type' => 'refresh_token',
+    ]);
+
+    $ch = curl_init('https://oauth2.googleapis.com/token');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+        CURLOPT_TIMEOUT => 12,
+    ]);
+
+    $body = curl_exec($ch);
+    $errno = curl_errno($ch);
+    $error = curl_error($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+    if ($errno !== 0) {
+        return [
+            'ok' => false,
+            'status' => 502,
+            'error' => 'Failed to contact Google OAuth: ' . $error,
+        ];
+    }
+
+    $json = json_decode($body, true);
+    if ($status >= 400 || !isset($json['access_token'])) {
+        $message = $json['error_description'] ?? $json['error'] ?? 'Unable to obtain access token';
+        return [
+            'ok' => false,
+            'status' => $status ?: 500,
+            'error' => 'OAuth token exchange failed: ' . $message,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'status' => $status,
+        'access_token' => $json['access_token'],
+        'expires_in' => $json['expires_in'] ?? null,
+    ];
+}
+
+/**
+ * Upload using Drive v3 multipart upload.
+ */
+function driveUploadFromArray(array $file, string $targetName, string $folderId = ''): array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return [
+            'ok' => false,
+            'status' => 400,
+            'error' => 'Upload failed. Please try again.',
+        ];
+    }
+
+    $tokenResult = fetchAccessTokenFromRefreshToken();
+    if (!$tokenResult['ok']) {
+        return [
+            'ok' => false,
+            'status' => $tokenResult['status'],
+            'error' => $tokenResult['error'],
+        ];
+    }
+
+    $uploadResult = driveMultipartUpload($tokenResult['access_token'], $file['tmp_name'], $targetName, $folderId);
+    if (!$uploadResult['ok']) {
+        return [
+            'ok' => false,
+            'status' => $uploadResult['status'],
+            'error' => $uploadResult['error'],
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'status' => 201,
+        'data' => $uploadResult['data'],
+    ];
+}
+
+function driveMultipartUpload(string $accessToken, string $tmpPath, string $fileName, string $folderId): array
+{
+    $mimeType = mime_content_type($tmpPath) ?: 'application/octet-stream';
+    $fileData = file_get_contents($tmpPath);
+
+    if ($fileData === false) {
+        return [
+            'ok' => false,
+            'status' => 500,
+            'error' => 'Unable to read uploaded file',
+        ];
+    }
+
+    $metadata = ['name' => $fileName];
+    if ($folderId !== '') {
+        $metadata['parents'] = [$folderId];
+    }
+
+    $boundary = '===============DriveBoundary' . bin2hex(random_bytes(6));
+    $bodyParts = [
+        "--$boundary",
+        'Content-Type: application/json; charset=UTF-8',
+        '',
+        json_encode($metadata),
+        "--$boundary",
+        'Content-Type: ' . $mimeType,
+        '',
+        $fileData,
+        "--$boundary--",
+        '',
+    ];
+    $multipartBody = implode("\r\n", $bodyParts);
+
+    $url = 'https://www.googleapis.com/upload/drive/v3/files'
+        . '?uploadType=multipart'
+        . '&supportsAllDrives=true'
+        . '&includeItemsFromAllDrives=true'
+        . '&fields=id,name,mimeType,size,webViewLink,webContentLink,iconLink,parents';
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: multipart/related; boundary=' . $boundary,
+            'Content-Length: ' . strlen($multipartBody),
+        ],
+        CURLOPT_POSTFIELDS => $multipartBody,
+        CURLOPT_TIMEOUT => 30,
+    ]);
+
+    $body = curl_exec($ch);
+    $errno = curl_errno($ch);
+    $error = curl_error($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+    if ($errno !== 0) {
+        return [
+            'ok' => false,
+            'status' => 502,
+            'error' => 'Upload failed: ' . $error,
+        ];
+    }
+
+    $data = json_decode($body, true) ?: [];
+
+    if ($status >= 400) {
+        $message = $data['error']['message'] ?? 'Google Drive returned HTTP ' . $status;
+        return [
+            'ok' => false,
+            'status' => $status,
+            'error' => $message,
+        ];
+    }
+
+    return [
+        'ok' => true,
+        'status' => $status,
+        'data' => $data,
+    ];
+}

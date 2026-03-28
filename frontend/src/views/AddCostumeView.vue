@@ -205,8 +205,8 @@
                 </td>
                 <td>
                   <div class="sizes-cell">
-                    <span v-for="size in parseSizes(costume.sizes)" :key="size" class="size-tag">{{
-                      size
+                    <span v-for="size in costume.sizes" :key="size" class="size-tag">{{
+                      parseSizeVal(size)
                     }}</span>
                   </div>
                 </td>
@@ -282,7 +282,6 @@ const form = reactive({
   category: '',
   description: '',
   image: '',
-  available: true,
   sizeStocks: [{ size: '', stock: 0 }],
 })
 
@@ -352,7 +351,6 @@ async function submitForm() {
     costume_code: form.costume_code.trim(),
     category: form.category.trim(),
     description: form.description.trim(),
-    available: form.available ? 1 : 0,
     sizeStocks: form.sizeStocks
       .filter((item) => item.size.trim())
       .map((item) => ({
@@ -375,6 +373,17 @@ async function submitForm() {
     payload.append('image', imageFile.value)
   }
 
+  // Debug: log what we send to the store (handles FormData vs JSON)
+  const debugPayload = useFormData
+    ? Object.fromEntries(
+        [...payload.entries()].map(([k, v]) => [
+          k,
+          v instanceof File ? { name: v.name, size: v.size, type: v.type } : v,
+        ]),
+      )
+    : payload
+  console.log('[AddCostume] payload to store.addCostume', debugPayload)
+
   loading.value = true
   try {
     const created = await store.addCostume(payload)
@@ -394,7 +403,6 @@ function resetForm() {
   form.category = ''
   form.description = ''
   form.image = ''
-  form.available = true
   form.sizeStocks = [{ size: '', stock: 0 }]
   clearFile()
   Object.keys(errors).forEach((k) => (errors[k] = ''))
@@ -418,18 +426,8 @@ function handleImageError(event) {
   event.target.style.display = 'none'
 }
 
-function parseSizes(sizes) {
-  if (!sizes) return []
-  if (Array.isArray(sizes)) return sizes
-  try {
-    return JSON.parse(sizes)
-  } catch {
-    // Split by comma and trim each item
-    return sizes
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s)
-  }
+function parseSizeVal(size) {
+  return `${size.size} (${size.quantity})`
 }
 
 function editCostume(id) {
