@@ -35,6 +35,10 @@ switch ($method) {
         createCostume();
         break;
 
+    case 'PUT':
+        updateCostume();
+        break;
+
     default:
         http_response_code(405);
         echo json_encode(['error' => 'Method not allowed']);
@@ -257,6 +261,7 @@ function createCostume(): void
     $name = trim($body['name'] ?? '');
     $costume_code = trim($body['costume_code'] ?? '');
     $group_category_id = trim($body['category'] ?? '');
+    $description = trim($body['description'] ?? '');
     $rack_id = trim($body['rack_id'] ?? '0');
     $sizeStocks = $body['sizeStocks'] ?? [];
 
@@ -279,8 +284,8 @@ function createCostume(): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, costume_code, group_category, rack_id, image)
-         VALUES (:name, :costume_code, :group_category_id, :rack_id, :image)'
+        'INSERT INTO costumes (name, costume_code, group_category, rack_id, image, description)
+         VALUES (:name, :costume_code, :group_category_id, :rack_id, :image, :description)'
     );
     $stmt->execute([
         ':name' => $name,
@@ -288,6 +293,7 @@ function createCostume(): void
         ':group_category_id' => $group_category_id,
         ':rack_id' => $rack_id,
         ':image' => $imagePath,
+        ':description' => $description,
     ]);
 
     $costumeId = (int) $db->lastInsertId();
@@ -317,6 +323,107 @@ function createCostume(): void
     }
 
     // Return the newly created costume
+    getCostume($costumeId);
+}
+
+function updateCostume(): void
+{
+    AuthMiddleware::requireAdminOrManager();
+
+    // Get costume ID from URL path or query parameter
+    $costumeId = (int) ($_GET['id'] ?? 0);
+
+    if ($costumeId <= 0) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid costume ID']);
+        return;
+    }
+
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    $isMultipart = str_contains($contentType, 'multipart/form-data');
+
+    $body = $isMultipart ? $_POST : json_decode(file_get_contents('php://input'), true);
+    if (!is_array($body)) {
+        $body = [];
+    }
+
+    $name = trim($body['name'] ?? '');
+    $costume_code = trim($body['costume_code'] ?? '');
+    $group_category_id = trim($body['category'] ?? '');
+    $rack_id = trim($body['rack_id'] ?? '0');
+    $sizeStocks = $body['sizeStocks'] ?? [];
+
+    $imagePath = trim($body['image'] ?? '');
+    if ($isMultipart && isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
+        $upload = handleImageUpload($_FILES['image']);
+        if (!$upload['ok']) {
+            http_response_code(400);
+            echo json_encode(['error' => $upload['error']]);
+            return;
+        }
+        $imagePath = $upload['path'];
+    }
+
+    if (!$name) {
+        http_response_code(400);
+        echo json_encode(['error' => 'name are required']);
+        return;
+    }
+
+    $db = getDB();
+
+    // Check if costume exists
+    $checkStmt = $db->prepare('SELECT id FROM costumes WHERE id = :id');
+    $checkStmt->execute([':id' => $costumeId]);
+    if (!$checkStmt->fetch()) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Costume not found']);
+        return;
+    }
+
+    // Update costume
+    $stmt = $db->prepare(
+        'UPDATE costumes SET name = :name, costume_code = :costume_code, group_category = :group_category_id, rack_id = :rack_id, image = :image WHERE id = :id'
+    );
+    $stmt->execute([
+        ':name' => $name,
+        ':costume_code' => $costume_code,
+        ':group_category_id' => $group_category_id,
+        ':rack_id' => $rack_id,
+        ':image' => $imagePath,
+        ':id' => $costumeId,
+    ]);
+
+    // Delete existing size stocks
+    $deleteStmt = $db->prepare('DELETE FROM costume_stock WHERE costume_id = :costume_id');
+    $deleteStmt->execute([':costume_id' => $costumeId]);
+
+    // Insert new size stocks
+    if (is_string($sizeStocks)) {
+        $sizeStocks = stripslashes($sizeStocks);
+        $sizeStocks = json_decode($sizeStocks, true);
+    }
+
+    if (is_array($sizeStocks) && count($sizeStocks) > 0) {
+        $sizeStmt = $db->prepare(
+            'INSERT INTO costume_stock (costume_id, quantity, size) VALUES (:costume_id, :quantity, :size)'
+        );
+
+        foreach ($sizeStocks as $item) {
+            $size = trim($item['size'] ?? '');
+            $stock = (int) ($item['stock'] ?? 0);
+
+            if ($size !== '') {
+                $sizeStmt->execute([
+                    ':costume_id' => $costumeId,
+                    ':quantity' => $stock,
+                    ':size' => $size,
+                ]);
+            }
+        }
+    }
+
+    // Return the updated costume
     getCostume($costumeId);
 }
 

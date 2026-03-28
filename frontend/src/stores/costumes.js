@@ -135,6 +135,42 @@ export const useCostumesStore = defineStore('costumes', () => {
     }
   }
 
+  // ── Update costume ────────────────────────────────────────────────────────
+  const updateCostume = async (id, costumeData) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const isFormData = typeof FormData !== 'undefined' && costumeData instanceof FormData
+
+      const res = await fetch(`${API_BASE}/api/costumes/${id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        },
+        body: isFormData ? costumeData : JSON.stringify(costumeData),
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`)
+
+      // Update the costume in the list
+      const index = costumes.value.findIndex((c) => c.id === id)
+      if (index !== -1) {
+        costumes.value[index] = json.data
+      }
+
+      return json.data
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   // ── Delete costume ────────────────────────────────────────────────────────
   const deleteCostume = async (id) => {
     loading.value = true
@@ -210,6 +246,7 @@ export const useCostumesStore = defineStore('costumes', () => {
     getCostumesByCategory,
     searchCostumes,
     addCostume,
+    updateCostume,
     deleteCostume,
 
     idDriveFile,

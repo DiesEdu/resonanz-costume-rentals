@@ -4,9 +4,13 @@
       <div class="container">
         <router-link to="/costumes" class="back-link">&larr; Back to collection</router-link>
         <p class="eyebrow">Inventory</p>
-        <h1>Add a new costume</h1>
+        <h1>{{ editingCostumeId ? 'Edit costume' : 'Add a new costume' }}</h1>
         <p class="lede">
-          Capture the essentials, attach a photo, and the piece is ready for rentals.
+          {{
+            editingCostumeId
+              ? 'Update the details below to modify this costume.'
+              : 'Capture the essentials, attach a photo, and the piece is ready for rentals.'
+          }}
         </p>
       </div>
     </section>
@@ -111,10 +115,12 @@
           </div>
 
           <div class="actions">
-            <router-link to="/costumes" class="ghost">Cancel</router-link>
+            <button type="button" class="ghost" @click="resetForm">
+              {{ editingCostumeId ? 'Cancel edit' : 'Cancel' }}
+            </button>
             <button type="submit" class="primary" :disabled="loading">
               <span v-if="loading" class="spinner"></span>
-              {{ loading ? 'Saving...' : 'Add costume' }}
+              {{ loading ? 'Saving...' : editingCostumeId ? 'Update costume' : 'Add costume' }}
             </button>
           </div>
         </form>
@@ -211,9 +217,9 @@
                   </div>
                 </td>
                 <td class="actions-cell">
-                  <router-link :to="`/costume/${costume.id}`" class="action-btn view">
+                  <button class="action-btn view" @click="viewCostume(costume.id)">
                     <i class="bi bi-eye"></i>
-                  </router-link>
+                  </button>
                   <button class="action-btn edit" @click="editCostume(costume.id)">
                     <i class="bi bi-pencil"></i>
                   </button>
@@ -285,6 +291,8 @@ const form = reactive({
   sizeStocks: [{ size: '', stock: 0 }],
 })
 
+const editingCostumeId = ref(null)
+
 const errors = reactive({})
 const loading = ref(false)
 const successMessage = ref('')
@@ -294,7 +302,13 @@ const imageFile = ref(null)
 const previewUrl = ref('')
 
 const categories = computed(() => store.categories.filter((c) => c !== 'All'))
-const previewImage = computed(() => (previewUrl.value ? previewUrl.value : form.image || ''))
+const previewImage = computed(() => {
+  if (previewUrl.value) return previewUrl.value
+  if (form.image) {
+    return `https://drive.google.com/thumbnail?id=${form.image}&sz=w1200`
+  }
+  return ''
+})
 const previewBackground = computed(() => 'linear-gradient(135deg, #0f0f1a, #1c2742)')
 const imageFileName = computed(() => imageFile.value?.name || 'No file chosen')
 
@@ -386,10 +400,18 @@ async function submitForm() {
 
   loading.value = true
   try {
-    const created = await store.addCostume(payload)
-    successMessage.value = '"' + created.name + '" added. Redirecting...'
-    resetForm()
-    setTimeout(() => router.push(`/costume/${created.id}`), 900)
+    if (editingCostumeId.value) {
+      // Update existing costume
+      const updated = await store.updateCostume(editingCostumeId.value, payload)
+      successMessage.value = '"' + updated.name + '" updated successfully!'
+      resetForm()
+    } else {
+      // Add new costume
+      const created = await store.addCostume(payload)
+      successMessage.value = '"' + created.name + '" added. Redirecting...'
+      resetForm()
+      setTimeout(() => router.push(`/costume/${created.id}`), 900)
+    }
   } catch (err) {
     errorMessage.value = err.message || 'Unable to save costume'
   } finally {
@@ -404,6 +426,7 @@ function resetForm() {
   form.description = ''
   form.image = ''
   form.sizeStocks = [{ size: '', stock: 0 }]
+  editingCostumeId.value = null
   clearFile()
   Object.keys(errors).forEach((k) => (errors[k] = ''))
 }
@@ -431,6 +454,38 @@ function parseSizeVal(size) {
 }
 
 function editCostume(id) {
+  const costume = costumes.value.find((c) => c.id === id)
+  if (!costume) return
+
+  // Set editing mode
+  editingCostumeId.value = id
+
+  // Populate form with costume data
+  form.name = costume.name || ''
+  form.costume_code = costume.costume_code || ''
+  form.category = costume.group_category || ''
+  form.description = costume.description || ''
+  form.image = costume.image || ''
+
+  // Convert sizes array to sizeStocks format
+  if (costume.sizes && costume.sizes.length > 0) {
+    form.sizeStocks = costume.sizes.map((size) => ({
+      size: size.size || '',
+      stock: size.quantity || 0,
+    }))
+  } else {
+    form.sizeStocks = [{ size: '', stock: 0 }]
+  }
+
+  // Clear any file selection
+  clearFile()
+
+  // Scroll to top of form
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function viewCostume(id) {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
   router.push(`/costume/${id}`)
 }
 
