@@ -25,9 +25,11 @@
       <small class="text-muted">
         <i class="bi bi-rulers me-1" style="color: var(--gold)"> </i>
         <div class="wrap-size">
-          <span v-for="size in costume.sizes" :key="size" class="size-chip">{{
-            parseSizeVal(size)
-          }}</span>
+          <span v-for="size in costume.sizes" :key="size" class="size-chip"
+            ><i :class="['me-1', genderIcon(size.gender)]"></i> {{ size.size }} ({{
+              size.quantity
+            }})</span
+          >
         </div>
       </small>
 
@@ -55,8 +57,11 @@ defineEmits(['book'])
 
 const imageUrl = ref(null)
 
-function parseSizeVal(size) {
-  return `${size.size} (${size.quantity})`
+function genderIcon(gender) {
+  const g = (gender || 'unisex').toLowerCase()
+  if (g === 'male') return 'bi bi-gender-male'
+  if (g === 'female') return 'bi bi-gender-female'
+  return 'bi bi-people'
 }
 
 onMounted(async () => {

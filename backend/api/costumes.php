@@ -82,10 +82,12 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
             c.id,
             c.name,
             c.costume_code,
+            c.type,
             c.group_category,
             c.rack_id,
             c.image,
             cs.size,
+            cs.gender,
             (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS quantity
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
@@ -155,6 +157,7 @@ function listCostumes(): void
                 'id' => (int) $row['id'],
                 'name' => $row['name'],
                 'costume_code' => $row['costume_code'],
+                'type' => $row['type'],
                 'group_category' => $row['group_category'],
                 'rack_id' => $row['rack_id'],
                 'image' => $row['image'],
@@ -164,6 +167,7 @@ function listCostumes(): void
         if ($row['size'] !== null) {
             $costumes[$costumeId]['sizes'][] = [
                 'size' => $row['size'],
+                'gender' => $row['gender'] ?? 'unisex',
                 'quantity' => (int) $row['quantity']
             ];
         }
@@ -199,10 +203,12 @@ function getCostume(int $id): void
             c.id,
             c.name,
             c.costume_code,
+            c.type,
             c.group_category,
             c.rack_id,
             c.image,
             cs.size,
+            cs.gender,
             (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS quantity
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
@@ -228,6 +234,7 @@ function getCostume(int $id): void
         'id' => $rows[0]['id'],
         'name' => $rows[0]['name'],
         'costume_code' => $rows[0]['costume_code'],
+        'type' => $rows[0]['type'],
         'group_category' => $rows[0]['group_category'],
         'rack_id' => $rows[0]['rack_id'],
         'image' => $rows[0]['image'],
@@ -238,6 +245,7 @@ function getCostume(int $id): void
         if ($row['size'] !== null) {
             $costume['sizes'][] = [
                 'size' => $row['size'],
+                'gender' => $row['gender'] ?? 'unisex',
                 'quantity' => (int) $row['quantity']
             ];
         }
@@ -260,6 +268,7 @@ function createCostume(): void
 
     $name = trim($body['name'] ?? '');
     $costume_code = trim($body['costume_code'] ?? '');
+    $type = trim($body['type'] ?? '');
     $group_category_id = trim($body['category'] ?? '');
     $description = trim($body['description'] ?? '');
     $rack_id = trim($body['rack_id'] ?? '0');
@@ -281,15 +290,21 @@ function createCostume(): void
         echo json_encode(['error' => 'name are required']);
         return;
     }
+    if (!$type) {
+        http_response_code(400);
+        echo json_encode(['error' => 'type is required']);
+        return;
+    }
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, costume_code, group_category, rack_id, image, description)
-         VALUES (:name, :costume_code, :group_category_id, :rack_id, :image, :description)'
+        'INSERT INTO costumes (name, costume_code, type, group_category, rack_id, image, description)
+         VALUES (:name, :costume_code, :type, :group_category_id, :rack_id, :image, :description)'
     );
     $stmt->execute([
         ':name' => $name,
         ':costume_code' => $costume_code,
+        ':type' => $type,
         ':group_category_id' => $group_category_id,
         ':rack_id' => $rack_id,
         ':image' => $imagePath,
@@ -305,18 +320,20 @@ function createCostume(): void
 
     if (is_array($sizeStocks) && count($sizeStocks) > 0) {
         $sizeStmt = $db->prepare(
-            'INSERT INTO costume_stock (costume_id, quantity, size) VALUES (:costume_id, :quantity, :size)'
+            'INSERT INTO costume_stock (costume_id, quantity, size, gender) VALUES (:costume_id, :quantity, :size, :gender)'
         );
 
         foreach ($sizeStocks as $item) {
             $size = trim($item['size'] ?? '');
             $stock = (int) ($item['stock'] ?? 0);
+            $gender = $item['gender'] ?? 'unisex';
 
             if ($size !== '') {
                 $sizeStmt->execute([
                     ':costume_id' => $costumeId,
                     ':quantity' => $stock,
                     ':size' => $size,
+                    ':gender' => $gender,
                 ]);
             }
         }
@@ -349,6 +366,7 @@ function updateCostume(): void
 
     $name = trim($body['name'] ?? '');
     $costume_code = trim($body['costume_code'] ?? '');
+    $type = trim($body['type'] ?? '');
     $group_category_id = trim($body['category'] ?? '');
     $rack_id = trim($body['rack_id'] ?? '0');
     $sizeStocks = $body['sizeStocks'] ?? [];
@@ -369,6 +387,11 @@ function updateCostume(): void
         echo json_encode(['error' => 'name are required']);
         return;
     }
+    if (!$type) {
+        http_response_code(400);
+        echo json_encode(['error' => 'type is required']);
+        return;
+    }
 
     $db = getDB();
 
@@ -383,11 +406,12 @@ function updateCostume(): void
 
     // Update costume
     $stmt = $db->prepare(
-        'UPDATE costumes SET name = :name, costume_code = :costume_code, group_category = :group_category_id, rack_id = :rack_id, image = :image WHERE id = :id'
+        'UPDATE costumes SET name = :name, costume_code = :costume_code, type = :type, group_category = :group_category_id, rack_id = :rack_id, image = :image WHERE id = :id'
     );
     $stmt->execute([
         ':name' => $name,
         ':costume_code' => $costume_code,
+        ':type' => $type,
         ':group_category_id' => $group_category_id,
         ':rack_id' => $rack_id,
         ':image' => $imagePath,
@@ -406,18 +430,20 @@ function updateCostume(): void
 
     if (is_array($sizeStocks) && count($sizeStocks) > 0) {
         $sizeStmt = $db->prepare(
-            'INSERT INTO costume_stock (costume_id, quantity, size) VALUES (:costume_id, :quantity, :size)'
+            'INSERT INTO costume_stock (costume_id, quantity, size, gender) VALUES (:costume_id, :quantity, :size, :gender)'
         );
 
         foreach ($sizeStocks as $item) {
             $size = trim($item['size'] ?? '');
             $stock = (int) ($item['stock'] ?? 0);
+            $gender = $item['gender'] ?? 'unisex';
 
             if ($size !== '') {
                 $sizeStmt->execute([
                     ':costume_id' => $costumeId,
                     ':quantity' => $stock,
                     ':size' => $size,
+                    ':gender' => $gender,
                 ]);
             }
         }
@@ -493,6 +519,7 @@ function formatCostume(array $row): array
         'costume_code' => $row['costume_code'],
         'group_category' => $row['group_category'],
         'rack_id' => $row['rack_id'],
+        'type' => $row['type'] ?? null,
         'sizes' => $row['sizes'] ?? '',
         'quantity' => max(0, (int) $row['quantity']),
         'image' => $row['image'],

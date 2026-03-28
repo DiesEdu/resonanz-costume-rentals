@@ -74,3 +74,14 @@ DROP FOREIGN KEY bookings_ibfk_1;
 ALTER TABLE bookings DROP COLUMN costume_id;
 
 ALTER TABLE costumes ADD COLUMN description TEXT AFTER image;
+----------------------------------------------------------------------------------------
+ALTER TABLE costumes 
+ADD COLUMN type ENUM('costume', 'accessory') 
+NOT NULL DEFAULT 'costume' 
+AFTER costume_code;
+
+ALTER TABLE costume_stock 
+ADD COLUMN gender ENUM('male', 'female', 'unisex') 
+NOT NULL DEFAULT 'unisex' 
+AFTER quantity;
+----------------------------------------------------------------------------------------

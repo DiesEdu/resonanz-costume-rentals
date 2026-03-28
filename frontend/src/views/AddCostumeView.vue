@@ -35,7 +35,7 @@
                 <p v-if="errors.costume_code" class="hint">{{ errors.costume_code }}</p>
               </label>
             </div>
-            <div class="fields">
+            <div class="fields two-col">
               <label class="field">
                 <span class="label">Category *</span>
                 <select v-model="form.category">
@@ -43,6 +43,15 @@
                   <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
                 </select>
                 <p v-if="errors.category" class="hint">{{ errors.category }}</p>
+              </label>
+              <label class="field">
+                <span class="label">Type *</span>
+                <select v-model="form.type">
+                  <option disabled value="">Pick one</option>
+                  <option value="costume">Costume</option>
+                  <option value="accessory">Accessory</option>
+                </select>
+                <p v-if="errors.type" class="hint">{{ errors.type }}</p>
               </label>
             </div>
           </div>
@@ -54,6 +63,14 @@
                 <label class="field">
                   <span class="label">Size</span>
                   <input v-model="item.size" type="text" placeholder="S" />
+                </label>
+                <label class="field">
+                  <span class="label">Gender</span>
+                  <select v-model="item.gender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="unisex">Unisex</option>
+                  </select>
                 </label>
                 <label class="field">
                   <span class="label">Stock</span>
@@ -134,6 +151,7 @@
             <p class="eyebrow">{{ form.category || 'Category' }}</p>
             <h3>{{ form.name || 'Untitled costume' }}</h3>
             <p class="muted">Code: {{ form.costume_code || '-' }}</p>
+            <p class="muted">Type: {{ form.type || '-' }}</p>
             <div class="sizes" v-if="form.sizeStocks.some((item) => item.size.trim())">
               <span
                 v-for="item in form.sizeStocks.filter((item) => item.size.trim())"
@@ -286,9 +304,10 @@ const form = reactive({
   name: '',
   costume_code: '',
   category: '',
+  type: '',
   description: '',
   image: '',
-  sizeStocks: [{ size: '', stock: 0 }],
+  sizeStocks: [{ size: '', gender: 'unisex', stock: 0 }],
 })
 
 const editingCostumeId = ref(null)
@@ -337,7 +356,7 @@ function imageError() {
 }
 
 function addSizeStock() {
-  form.sizeStocks.push({ size: '', stock: 0 })
+  form.sizeStocks.push({ size: '', gender: 'unisex', stock: 0 })
 }
 
 function removeSizeStock(index) {
@@ -348,6 +367,7 @@ function validate() {
   errors.name = form.name ? '' : 'Name is required'
   errors.costume_code = form.costume_code ? '' : 'Code is required'
   errors.category = form.category ? '' : 'Category is required'
+  errors.type = form.type ? '' : 'Type is required'
   errors.sizeStocks = form.sizeStocks.some((item) => item.size.trim())
     ? ''
     : 'Add at least one size'
@@ -364,11 +384,13 @@ async function submitForm() {
     name: form.name.trim(),
     costume_code: form.costume_code.trim(),
     category: form.category.trim(),
+    type: form.type.trim(),
     description: form.description.trim(),
     sizeStocks: form.sizeStocks
       .filter((item) => item.size.trim())
       .map((item) => ({
         size: item.size.trim(),
+        gender: item.gender || 'unisex',
         stock: Number(item.stock) || 0,
       })),
   }
@@ -423,9 +445,10 @@ function resetForm() {
   form.name = ''
   form.costume_code = ''
   form.category = ''
+  form.type = ''
   form.description = ''
   form.image = ''
-  form.sizeStocks = [{ size: '', stock: 0 }]
+  form.sizeStocks = [{ size: '', gender: 'unisex', stock: 0 }]
   editingCostumeId.value = null
   clearFile()
   Object.keys(errors).forEach((k) => (errors[k] = ''))
@@ -450,7 +473,8 @@ function handleImageError(event) {
 }
 
 function parseSizeVal(size) {
-  return `${size.size} (${size.quantity})`
+  const gender = size.gender ? ` • ${size.gender}` : ''
+  return `${size.size}${gender} (${size.quantity})`
 }
 
 function editCostume(id) {
@@ -464,6 +488,7 @@ function editCostume(id) {
   form.name = costume.name || ''
   form.costume_code = costume.costume_code || ''
   form.category = costume.group_category || ''
+  form.type = costume.type || ''
   form.description = costume.description || ''
   form.image = costume.image || ''
 
@@ -471,10 +496,11 @@ function editCostume(id) {
   if (costume.sizes && costume.sizes.length > 0) {
     form.sizeStocks = costume.sizes.map((size) => ({
       size: size.size || '',
+      gender: size.gender || 'unisex',
       stock: size.quantity || 0,
     }))
   } else {
-    form.sizeStocks = [{ size: '', stock: 0 }]
+    form.sizeStocks = [{ size: '', gender: 'unisex', stock: 0 }]
   }
 
   // Clear any file selection

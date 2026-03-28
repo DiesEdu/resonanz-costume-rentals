@@ -73,9 +73,10 @@
           <div class="mb-4">
             <p class="section-eyebrow mb-3">Available Sizes</p>
             <div class="d-flex gap-2 flex-wrap">
-              <span v-for="size in costume.sizes" :key="size" class="size-chip">{{
-                parseSizeVal(size)
-              }}</span>
+              <span v-for="size in costume.sizes" :key="`${size.size}-${size.gender}`" class="size-chip">
+                <i :class="['me-1', genderIcon(size.gender)]"></i>
+                {{ size.size }} ({{ size.quantity }})
+              </span>
             </div>
           </div>
 
@@ -125,8 +126,11 @@ const bookingModal = ref(null)
 const costume = ref(null)
 const imageUrl = ref(null)
 
-function parseSizeVal(size) {
-  return `${size.size} (${size.quantity})`
+function genderIcon(gender) {
+  const g = (gender || 'unisex').toLowerCase()
+  if (g === 'male') return 'bi bi-gender-male'
+  if (g === 'female') return 'bi bi-gender-female'
+  return 'bi bi-people'
 }
 
 onMounted(async () => {
