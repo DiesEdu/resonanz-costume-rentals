@@ -34,6 +34,8 @@ switch ($method) {
     case 'POST':
         if ($action === 'files/batch') {
             batchFetchDriveFiles();
+        } elseif ($action === 'update-img-id') {
+            processUpdateImgId();
         } else {
             http_response_code(404);
             echo json_encode(['error' => 'Unknown action']);
@@ -74,6 +76,86 @@ function fetchDriveFiles(): void
     http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');
     echo $result['body'];
+}
+
+function processUpdateImgId()
+{
+    // Allow longer processing for multiple Drive lookups (default is 30s)
+    @set_time_limit(300);
+
+    $db = getDB();
+
+    $sql = 'SELECT c.id, c.image
+        FROM costumes c';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+
+    $rows = $stmt->fetchAll();
+
+    // Process get id file gdrive
+    $apiKey = validateApiKey();
+    if (!$apiKey)
+        return;
+
+    $folder = getFolderId();
+
+    header('Content-Type: application/json; charset=utf-8');
+
+    $updated = 0;
+    $errors = [];
+
+    foreach ($rows as $row) {
+        // Skip if image is already a Google Drive ID (not a filename)
+        if (empty($row['image']) || preg_match('/^[a-zA-Z0-9_-]{20,}$/', $row['image']) && $row['id'] < 739) {
+            continue;
+        }
+
+        $result = searchDriveFile($apiKey, $row['image'], $folder);
+
+        if (!$result['ok']) {
+            $errors[] = [
+                'costume_id' => $row['id'],
+                'image' => $row['image'],
+                'error' => $result['error']
+            ];
+            continue;
+        }
+
+        $driveResponse = json_decode($result['body'], true);
+        $files = $driveResponse['files'] ?? [];
+
+        if (empty($files)) {
+            $errors[] = [
+                'costume_id' => $row['id'],
+                'image' => $row['image'],
+                'error' => 'File not found in Google Drive'
+            ];
+            continue;
+        }
+
+        // Get the first matching file ID
+        $fileId = $files[0]['id'];
+
+        // Update the costume with the Google Drive file ID
+        $updateSql = 'UPDATE costumes SET image = :image WHERE id = :id';
+        $updateStmt = $db->prepare($updateSql);
+        $updateStmt->execute([
+            ':image' => $fileId,
+            ':id' => $row['id']
+        ]);
+
+        $updated++;
+    }
+
+    http_response_code(200);
+    echo json_encode([
+        'success' => true,
+        'message' => 'Image IDs updated successfully',
+        'updated' => $updated,
+        'total' => count($rows),
+        'errors' => $errors
+    ], JSON_PRETTY_PRINT);
 }
 
 function batchFetchDriveFiles(): void
