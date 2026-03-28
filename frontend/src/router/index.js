@@ -10,6 +10,11 @@ const router = createRouter({
       component: HomeView,
     },
     {
+      path: '/add-costumes',
+      name: 'add-costumes',
+      component: () => import('../views/AddCostumeView.vue'),
+    },
+    {
       path: '/costumes',
       name: 'costumes',
       component: () => import('../views/CostumesView.vue'),

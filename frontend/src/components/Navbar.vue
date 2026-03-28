@@ -88,8 +88,12 @@
                   <span class="dropdown-email">{{ authStore.user?.email }}</span>
                 </div>
                 <div class="dropdown-divider"></div>
-                <router-link to="/my-bookings" class="dropdown-item-link" @click="userOpen = false">
-                  <i class="bi bi-calendar-check me-2"></i>My Bookings
+                <router-link
+                  to="/add-costumes"
+                  class="dropdown-item-link"
+                  @click="userOpen = false"
+                >
+                  <i class="bi bi-calendar-check me-2"></i>Add Costumes
                 </router-link>
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-item-link text-danger-soft" @click="handleLogout">
@@ -320,6 +324,18 @@ onUnmounted(() => {
     background: var(--charcoal-2);
     padding: 0.75rem 1rem;
     border-radius: 4px;
+    overflow: visible;
+  }
+  .user-menu {
+    position: static;
+  }
+  .user-dropdown {
+    position: fixed;
+    top: auto;
+    right: 1rem;
+    left: 1rem;
+    min-width: auto;
+    width: auto;
   }
 }
 </style>

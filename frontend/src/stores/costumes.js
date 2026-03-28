@@ -135,6 +135,33 @@ export const useCostumesStore = defineStore('costumes', () => {
     }
   }
 
+  // ── Delete costume ────────────────────────────────────────────────────────
+  const deleteCostume = async (id) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const res = await fetch(`${API_BASE}/api/costumes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error || `HTTP ${res.status}`)
+      }
+
+      costumes.value = costumes.value.filter((c) => c.id !== id)
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   // ── Resolve Google Drive fileId from filename (with cache) ─────────────────
   const idDriveFile = async (fileName) => {
     if (!fileName) return null
@@ -183,6 +210,7 @@ export const useCostumesStore = defineStore('costumes', () => {
     getCostumesByCategory,
     searchCostumes,
     addCostume,
+    deleteCostume,
 
     idDriveFile,
     getDriveImageUrl,
