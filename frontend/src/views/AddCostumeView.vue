@@ -31,7 +31,7 @@
                 <p v-if="errors.costume_code" class="hint">{{ errors.costume_code }}</p>
               </label>
             </div>
-            <div class="fields three-col">
+            <div class="fields">
               <label class="field">
                 <span class="label">Category *</span>
                 <select v-model="form.category">
@@ -40,30 +40,35 @@
                 </select>
                 <p v-if="errors.category" class="hint">{{ errors.category }}</p>
               </label>
-              <label class="field">
-                <span class="label">Stock *</span>
-                <input v-model.number="form.amount" min="0" type="number" />
-                <p v-if="errors.amount" class="hint">{{ errors.amount }}</p>
-              </label>
-              <label class="field toggle-field">
-                <span class="label">Available</span>
-                <div class="toggle">
-                  <input id="available" v-model="form.available" type="checkbox" />
-                  <span>{{ form.available ? 'Listed' : 'Hidden' }}</span>
-                </div>
-              </label>
             </div>
           </div>
 
           <div class="section">
-            <div class="section-title">Sizing</div>
-            <div class="chips">
-              <label v-for="size in sizeOptions" :key="size" class="chip">
-                <input v-model="form.sizes" type="checkbox" :value="size" />
-                <span>{{ size }}</span>
-              </label>
+            <div class="section-title">Sizing & Stock</div>
+            <div class="size-stock-list">
+              <div v-for="(item, index) in form.sizeStocks" :key="index" class="size-stock-row">
+                <label class="field">
+                  <span class="label">Size</span>
+                  <input v-model="item.size" type="text" placeholder="S" />
+                </label>
+                <label class="field">
+                  <span class="label">Stock</span>
+                  <input v-model.number="item.stock" type="number" min="0" placeholder="0" />
+                </label>
+                <button
+                  type="button"
+                  class="btn-remove"
+                  @click="removeSizeStock(index)"
+                  v-if="form.sizeStocks.length > 1"
+                >
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+              <button type="button" class="btn-add-size" @click="addSizeStock">
+                <i class="bi bi-plus-circle me-1"></i> Add Size
+              </button>
             </div>
-            <p v-if="errors.sizes" class="hint">{{ errors.sizes }}</p>
+            <p v-if="errors.sizeStocks" class="hint">{{ errors.sizeStocks }}</p>
           </div>
 
           <div class="section">
@@ -122,11 +127,15 @@
           <div class="preview-body">
             <p class="eyebrow">{{ form.category || 'Category' }}</p>
             <h3>{{ form.name || 'Untitled costume' }}</h3>
-            <p class="muted">
-              Code: {{ form.costume_code || '-' }} | Stock: {{ form.amount || 0 }}
-            </p>
-            <div class="sizes" v-if="form.sizes.length">
-              <span v-for="size in form.sizes" :key="size" class="size-pill">{{ size }}</span>
+            <p class="muted">Code: {{ form.costume_code || '-' }}</p>
+            <div class="sizes" v-if="form.sizeStocks.some((item) => item.size.trim())">
+              <span
+                v-for="item in form.sizeStocks.filter((item) => item.size.trim())"
+                :key="item.size"
+                class="size-pill"
+              >
+                {{ item.size }} ({{ item.stock }})
+              </span>
             </div>
             <p class="muted description">
               {{ form.description || 'Add a short description to help renters decide.' }}
@@ -169,8 +178,7 @@
                 <th>Name</th>
                 <th>Code</th>
                 <th>Category</th>
-                <th>Stock</th>
-                <th>Sizes</th>
+                <th>Sizes & Stock</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -193,9 +201,8 @@
                 <td class="name-cell">{{ costume.name }}</td>
                 <td>{{ costume.costume_code }}</td>
                 <td>
-                  <span class="category-badge">{{ costume.category }}</span>
+                  <span class="category-badge">{{ costume.group_category }}</span>
                 </td>
-                <td>{{ costume.amount }}</td>
                 <td>
                   <div class="sizes-cell">
                     <span v-for="size in parseSizes(costume.sizes)" :key="size" class="size-tag">{{
@@ -269,16 +276,14 @@ const searchQuery = ref('')
 const selectedCategory = ref('')
 const currentPage = ref(1)
 
-const sizeOptions = ['XS', 'S', 'M', 'L', 'XL']
 const form = reactive({
   name: '',
   costume_code: '',
   category: '',
-  amount: 1,
   description: '',
   image: '',
   available: true,
-  sizes: [],
+  sizeStocks: [{ size: '', stock: 0 }],
 })
 
 const errors = reactive({})
@@ -318,12 +323,21 @@ function imageError() {
   clearFile()
 }
 
+function addSizeStock() {
+  form.sizeStocks.push({ size: '', stock: 0 })
+}
+
+function removeSizeStock(index) {
+  form.sizeStocks.splice(index, 1)
+}
+
 function validate() {
   errors.name = form.name ? '' : 'Name is required'
   errors.costume_code = form.costume_code ? '' : 'Code is required'
   errors.category = form.category ? '' : 'Category is required'
-  errors.amount = form.amount >= 0 ? '' : 'Stock must be zero or more'
-  errors.sizes = form.sizes.length ? '' : 'Pick at least one size'
+  errors.sizeStocks = form.sizeStocks.some((item) => item.size.trim())
+    ? ''
+    : 'Add at least one size'
   errors.description = form.description.length > 400 ? 'Keep it under 400 characters' : ''
   return Object.values(errors).every((v) => !v)
 }
@@ -337,10 +351,14 @@ async function submitForm() {
     name: form.name.trim(),
     costume_code: form.costume_code.trim(),
     category: form.category.trim(),
-    amount: Number(form.amount) || 0,
     description: form.description.trim(),
     available: form.available ? 1 : 0,
-    sizes: form.sizes,
+    sizeStocks: form.sizeStocks
+      .filter((item) => item.size.trim())
+      .map((item) => ({
+        size: item.size.trim(),
+        stock: Number(item.stock) || 0,
+      })),
   }
 
   const useFormData = imageFile.value && typeof FormData !== 'undefined'
@@ -348,8 +366,8 @@ async function submitForm() {
 
   if (useFormData) {
     Object.entries(base).forEach(([key, value]) => {
-      if (key === 'sizes') {
-        payload.append('sizes', JSON.stringify(value))
+      if (key === 'sizeStocks') {
+        payload.append('sizeStocks', JSON.stringify(value))
       } else {
         payload.append(key, value)
       }
@@ -374,11 +392,10 @@ function resetForm() {
   form.name = ''
   form.costume_code = ''
   form.category = ''
-  form.amount = 1
   form.description = ''
   form.image = ''
   form.available = true
-  form.sizes = []
+  form.sizeStocks = [{ size: '', stock: 0 }]
   clearFile()
   Object.keys(errors).forEach((k) => (errors[k] = ''))
 }
@@ -407,7 +424,11 @@ function parseSizes(sizes) {
   try {
     return JSON.parse(sizes)
   } catch {
-    return []
+    // Split by comma and trim each item
+    return sizes
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s)
   }
 }
 
@@ -997,6 +1018,8 @@ textarea {
 /* Table Controls Styles */
 .table-controls {
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 16px;
   padding: 20px 24px;
   border-bottom: 1px solid #e8e3d9;
@@ -1011,7 +1034,7 @@ textarea {
 
 .search-box i {
   position: absolute;
-  left: 14px;
+  left: 34px;
   top: 50%;
   transform: translateY(-50%);
   color: #6b6f7c;
@@ -1130,5 +1153,64 @@ textarea {
     flex-direction: column;
     gap: 4px;
   }
+}
+
+/* Size Stock List Styles */
+.size-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.size-stock-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.size-stock-row .field {
+  flex: 1;
+}
+
+.btn-remove {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #f0c8c1;
+  background: #fff2f0;
+  color: #b5463b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-remove:hover {
+  background: #b5463b;
+  color: #fff;
+}
+
+.btn-add-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1px dashed #dcd7ce;
+  border-radius: 10px;
+  background: #fbf9f6;
+  color: #6b6f7c;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+
+.btn-add-size:hover {
+  border-color: #e7c060;
+  background: #fff8e7;
+  color: #b5892a;
 }
 </style>

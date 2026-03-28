@@ -88,13 +88,15 @@
                   <span class="dropdown-email">{{ authStore.user?.email }}</span>
                 </div>
                 <div class="dropdown-divider"></div>
-                <router-link
-                  to="/add-costumes"
-                  class="dropdown-item-link"
-                  @click="userOpen = false"
-                >
-                  <i class="bi bi-calendar-check me-2"></i>Add Costumes
-                </router-link>
+                <div v-if="isManager">
+                  <router-link
+                    to="/add-costumes"
+                    class="dropdown-item-link"
+                    @click="userOpen = false"
+                  >
+                    <i class="bi bi-calendar-check me-2"></i>Add Costumes
+                  </router-link>
+                </div>
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-item-link text-danger-soft" @click="handleLogout">
                   <i class="bi bi-box-arrow-right me-2"></i>Sign Out

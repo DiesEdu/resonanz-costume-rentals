@@ -52,3 +52,23 @@ CREATE TABLE IF NOT EXISTS costume_stock (
 )
 ----------------------------------------------------------------------------------------
 ALTER TABLE bookings DROP COLUMN size;
+----------------------------------------------------------------------------------------
+-- Move size column from costumes to costume_stock table
+ALTER TABLE costume_stock ADD COLUMN size VARCHAR(255) NOT NULL AFTER quantity;
+-- Migrate existing size data from costumes to costume_stock
+UPDATE costume_stock cs
+JOIN costumes c ON cs.costume_id = c.id
+SET cs.size = c.size
+WHERE c.size IS NOT NULL 
+  AND c.size != ''
+  AND (cs.size IS NULL OR cs.size = '');
+-- Remove size column from costumes table
+ALTER TABLE costumes DROP COLUMN size;
+
+ALTER TABLE bookings ADD COLUMN costume_stock_id INT NOT NULL AFTER costume_id;
+ALTER TABLE bookings ADD
+FOREIGN KEY (costume_stock_id) REFERENCES costume_stock(id) ON DELETE CASCADE;
+
+ALTER TABLE bookings
+DROP FOREIGN KEY bookings_ibfk_1;
+ALTER TABLE bookings DROP COLUMN costume_id;

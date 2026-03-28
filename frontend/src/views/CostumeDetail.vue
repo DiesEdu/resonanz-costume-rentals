@@ -76,7 +76,9 @@
           <div class="mb-4">
             <p class="section-eyebrow mb-3">Available Sizes</p>
             <div class="d-flex gap-2 flex-wrap">
-              <span class="size-chip">{{ costume.size }}</span>
+              <span v-for="size in parseSizes(costume.sizes)" :key="size" class="size-chip">{{
+                size
+              }}</span>
             </div>
           </div>
 
@@ -126,9 +128,23 @@ const bookingModal = ref(null)
 const costume = ref(null)
 const imageUrl = ref(null)
 
+function parseSizes(sizes) {
+  if (!sizes) return []
+  if (Array.isArray(sizes)) return sizes
+  try {
+    return JSON.parse(sizes)
+  } catch {
+    // Split by comma and trim each item
+    return sizes
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s)
+  }
+}
+
 onMounted(async () => {
   costume.value = await costumesStore.getCostumeById(route.params.id)
-  imageUrl.value = await costumesStore.getDriveImageUrl(costume.value.image)
+  imageUrl.value = `https://drive.google.com/thumbnail?id=${costume.value.image}&sz=w1200`
 })
 
 const assurances = [

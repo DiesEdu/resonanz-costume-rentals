@@ -64,9 +64,11 @@ function listBookings(): void
     $db = getDB();
     $customerId = $user['id'] ?? 0;
 
-    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, c.size AS costume_size
+    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, 
+            GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS costume_size
             FROM bookings b
             LEFT JOIN costumes c ON c.id = b.costume_id
+            LEFT JOIN costume_stock cs ON cs.costume_id = c.id
             WHERE 1=1';
     $params = [];
 
@@ -93,9 +95,11 @@ function listBookingsForManager(): void
     }
     $db = getDB();
 
-    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, c.size AS costume_size
+    $sql = 'SELECT b.*, c.image AS costume_image, c.name AS costume_name, 
+            GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS costume_size
             FROM bookings b
             LEFT JOIN costumes c ON c.id = b.costume_id
+            LEFT JOIN costume_stock cs ON cs.costume_id = c.id
             WHERE 1=1';
     $params = [];
 
@@ -117,10 +121,13 @@ function getBooking(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT b.*, c.image AS costume_image
+        'SELECT b.*, c.image AS costume_image, c.name AS costume_name,
+         GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS costume_size
          FROM bookings b
          LEFT JOIN costumes c ON c.id = b.costume_id
-         WHERE b.id = :id'
+         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
+         WHERE b.id = :id
+         GROUP BY b.id'
     );
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();

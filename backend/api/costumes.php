@@ -69,7 +69,9 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
 {
     $db = getDB();
 
-    $sql = 'SELECT c.*, (COALESCE(SUM(cs.quantity),0) - COALESCE(ob.total_booked,0)) AS quantity
+    $sql = 'SELECT c.*, 
+            (COALESCE(SUM(cs.quantity),0) - COALESCE(ob.total_booked,0)) AS quantity,
+            GROUP_CONCAT(DISTINCT cs.size ORDER BY cs.size) AS sizes
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
         LEFT JOIN (
@@ -156,28 +158,64 @@ function getCostume(int $id): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'SELECT c.*, (COALESCE(SUM(cs.quantity),0) - COALESCE(ob.total_booked,0)) AS quantity
+        'SELECT 
+            c.id,
+            c.name,
+            c.costume_code,
+            c.group_category,
+            c.rack_id,
+            c.image,
+            cs.size,
+            (COALESCE(cs.quantity, 0) - COALESCE(ob.total_booked, 0)) AS quantity
         FROM costumes c
         LEFT JOIN costume_stock cs ON cs.costume_id = c.id
         LEFT JOIN (
-            SELECT costume_id, SUM(amount_book) AS total_booked
+            SELECT costume_stock_id, SUM(amount_book) AS total_booked
             FROM bookings
             WHERE status IN ("waiting_approval","processing","completed")
-            GROUP BY costume_id
-        ) ob ON ob.costume_id = c.id
-        WHERE c.id = :id
-        GROUP BY c.id, ob.total_booked;'
+            GROUP BY costume_stock_id
+        ) ob ON ob.costume_stock_id = cs.id
+        WHERE c.id = :id'
     );
-    $stmt->execute([':id' => $id]);
-    $row = $stmt->fetch();
 
-    if (!$row) {
+    $stmt->execute([':id' => $id]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (!$rows) {
         http_response_code(404);
         echo json_encode(['error' => 'Costume not found']);
         return;
     }
 
-    echo json_encode(['data' => formatCostume($row)]);
+    // Build structured response
+    // 'id' => (int) $row['id'],
+    //     'name' => $row['name'],
+    //     'costume_code' => $row['costume_code'],
+    //     'group_category' => $row['group_category'],
+    //     'rack_id' => $row['rack_id'],
+    //     'sizes' => $row['sizes'] ?? '',
+    //     'quantity' => max(0, (int) $row['quantity']),
+    //     'image' => $row['image'],
+    $costume = [
+        'id' => $rows[0]['id'],
+        'name' => $rows[0]['name'],
+        'costume_code' => $rows[0]['costume_code'],
+        'group_category' => $rows[0]['group_category'],
+        'rack_id' => $rows[0]['rack_id'],
+        'image' => $rows[0]['image'],
+        'sizes' => []
+    ];
+
+    foreach ($rows as $row) {
+        if ($row['size'] !== null) {
+            $costume['sizes'][] = [
+                'size' => $row['size'],
+                'quantity' => (int) $row['quantity']
+            ];
+        }
+    }
+
+    echo json_encode(['data' => $costume]);
 }
 
 function createCostume(): void
@@ -196,7 +234,7 @@ function createCostume(): void
     $costume_code = trim($body['costume_code'] ?? '');
     $group_category_id = trim($body['group_category_id'] ?? '');
     $rack_id = trim($body['rack_id'] ?? '');
-    $size = trim($body['size'] ?? '');
+    $sizeStocks = $body['sizeStocks'] ?? [];
 
     $imagePath = trim($body['image'] ?? '');
     if ($isMultipart && isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -217,19 +255,36 @@ function createCostume(): void
 
     $db = getDB();
     $stmt = $db->prepare(
-        'INSERT INTO costumes (name, costume_code, group_category_id, rack_id, size, image)
-         VALUES (:name, :costume_code, :group_category_id, :rack_id, :size, :image)'
+        'INSERT INTO costumes (name, costume_code, group_category_id, rack_id, image)
+         VALUES (:name, :costume_code, :group_category_id, :rack_id, :image)'
     );
     $stmt->execute([
         ':name' => $name,
         ':costume_code' => $costume_code,
         ':group_category_id' => $group_category_id,
         ':rack_id' => $rack_id,
-        ':size' => $size,
         ':image' => $imagePath,
     ]);
 
     $costumeId = (int) $db->lastInsertId();
+
+    // Insert sizes into costume_stock table
+    if (is_array($sizeStocks) && count($sizeStocks) > 0) {
+        $sizeStmt = $db->prepare(
+            'INSERT INTO costume_stock (costume_id, quantity, size) VALUES (:costume_id, :quantity, :size)'
+        );
+        foreach ($sizeStocks as $item) {
+            $size = trim($item['size'] ?? '');
+            $stock = intval($item['stock'] ?? 0);
+            if ($size) {
+                $sizeStmt->execute([
+                    ':costume_id' => $costumeId,
+                    ':quantity' => $stock,
+                    ':size' => $size,
+                ]);
+            }
+        }
+    }
 
     // Return the newly created costume
     getCostume($costumeId);
@@ -300,7 +355,7 @@ function formatCostume(array $row): array
         'costume_code' => $row['costume_code'],
         'group_category' => $row['group_category'],
         'rack_id' => $row['rack_id'],
-        'size' => $row['size'],
+        'sizes' => $row['sizes'] ?? '',
         'quantity' => max(0, (int) $row['quantity']),
         'image' => $row['image'],
     ];

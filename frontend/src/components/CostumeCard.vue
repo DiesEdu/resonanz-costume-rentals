@@ -40,7 +40,8 @@
         style="border-top: 1px solid rgba(201, 168, 76, 0.15)"
       >
         <small class="text-muted">
-          <i class="bi bi-rulers me-1" style="color: var(--gold)"></i>{{ costume.size }}
+          <i class="bi bi-rulers me-1" style="color: var(--gold)"></i
+          >{{ parseSizes(costume.sizes).join(', ') }}
         </small>
         <router-link :to="`/costume/${costume.id}`" class="btn btn-outline-primary btn-sm">
           Details <i class="bi bi-arrow-right ms-1"></i>
@@ -53,9 +54,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import LazyDriveImage from './LazyDriveImage.vue'
-import { useCostumesStore } from '@/stores/costumes'
-
-const costumesStore = useCostumesStore()
 
 const props = defineProps({
   costume: { type: Object, required: true },
@@ -71,8 +69,22 @@ const imageUrl = ref(null)
 //     : props.costume.description,
 // )
 
+function parseSizes(sizes) {
+  if (!sizes) return []
+  if (Array.isArray(sizes)) return sizes
+  try {
+    return JSON.parse(sizes)
+  } catch {
+    // Split by comma and trim each item
+    return sizes
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s)
+  }
+}
+
 onMounted(async () => {
-  imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
+  imageUrl.value = `https://drive.google.com/thumbnail?id=${props.costume.image}&sz=w1200`
 })
 </script>
 

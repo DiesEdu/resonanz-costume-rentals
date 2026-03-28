@@ -51,12 +51,14 @@
                     <label class="form-label fw-bold">Select Size</label>
                     <div class="d-flex gap-2 flex-wrap">
                       <button
+                        v-for="size in parseSizes(costume.sizes)"
+                        :key="size"
                         type="button"
                         class="btn"
-                        :class="'btn-primary'"
-                        @click="selectedSize = costume.size"
+                        :class="selectedSize === size ? 'btn-primary' : 'btn-outline-secondary'"
+                        @click="selectedSize = size"
                       >
-                        {{ costume.size }}
+                        {{ size }}
                       </button>
                     </div>
                   </div>
@@ -193,10 +195,25 @@ const isValid = computed(() => {
   )
 })
 
+function parseSizes(sizes) {
+  if (!sizes) return []
+  if (Array.isArray(sizes)) return sizes
+  try {
+    return JSON.parse(sizes)
+  } catch {
+    // Split by comma and trim each item
+    return sizes
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s)
+  }
+}
+
 onMounted(async () => {
   if (props.costume) {
     imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
-    selectedSize.value = props.costume.size
+    const sizes = parseSizes(props.costume.sizes)
+    selectedSize.value = sizes[0] || ''
   }
 })
 
@@ -204,7 +221,8 @@ watch(
   () => props.costume,
   (newCostume) => {
     if (newCostume) {
-      selectedSize.value = newCostume.size[0]
+      const sizes = parseSizes(newCostume.sizes)
+      selectedSize.value = sizes[0] || ''
       amount.value = 1
     }
   },
