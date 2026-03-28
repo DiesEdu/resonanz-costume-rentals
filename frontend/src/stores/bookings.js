@@ -72,6 +72,7 @@ export const useBookingsStore = defineStore('bookings', () => {
 
   // ── Add a new booking ──────────────────────────────────────────────────────
   const addBooking = async (booking) => {
+    console.log('booking value' + JSON.stringify(booking))
     error.value = null
     try {
       const res = await fetch(`${API_BASE}/api/bookings`, {

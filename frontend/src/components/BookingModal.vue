@@ -51,14 +51,16 @@
                     <label class="form-label fw-bold">Select Size</label>
                     <div class="d-flex gap-2 flex-wrap">
                       <button
-                        v-for="size in parseSizes(costume.sizes)"
-                        :key="size"
+                        v-for="sizeObj in parseSizes(costume.sizes)"
+                        :key="sizeObj.size"
                         type="button"
                         class="btn"
-                        :class="selectedSize === size ? 'btn-primary' : 'btn-outline-secondary'"
-                        @click="selectedSize = size"
+                        :class="
+                          selectedSize === sizeObj.size ? 'btn-primary' : 'btn-outline-secondary'
+                        "
+                        @click="selectedSize = sizeObj.size"
                       >
-                        {{ size }}
+                        {{ sizeObj.size }}
                       </button>
                     </div>
                   </div>
@@ -134,7 +136,6 @@
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { Modal, Toast } from 'bootstrap'
 import { useBookingsStore } from '@/stores/bookings'
-import { useCostumesStore } from '@/stores/costumes'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import LazyDriveImage from '@/components/LazyDriveImage.vue'
@@ -149,7 +150,6 @@ const props = defineProps({
 const emit = defineEmits(['booked'])
 
 const bookingsStore = useBookingsStore()
-const costumesStore = useCostumesStore()
 const authStore = useAuthStore()
 const router = useRouter()
 const modalRef = ref(null)
@@ -178,7 +178,17 @@ const totalDays = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const availableAmount = computed(() => Number(props.costume?.quantity ?? 0))
+const selectedSizeObj = computed(() => {
+  const sizes = parseSizes(props.costume?.sizes)
+  return sizes.find((s) => s.size === selectedSize.value) || null
+})
+
+const availableAmount = computed(() => {
+  if (selectedSizeObj.value) {
+    return Number(selectedSizeObj.value.quantity) || 0
+  }
+  return Number(props.costume?.quantity ?? 0)
+})
 const remainingAmount = computed(() =>
   Math.max(availableAmount.value - Number(amount.value || 0), 0),
 )
@@ -197,23 +207,48 @@ const isValid = computed(() => {
 
 function parseSizes(sizes) {
   if (!sizes) return []
-  if (Array.isArray(sizes)) return sizes
+  if (Array.isArray(sizes)) {
+    // Handle new format: array of objects with size and quantity
+    if (sizes.length > 0 && typeof sizes[0] === 'object' && 'size' in sizes[0]) {
+      return sizes.map((item) => ({
+        size: item.size,
+        quantity: Number(item.quantity) || 0,
+      }))
+    }
+    // Handle old format: array of strings
+    return sizes.map((s) => ({ size: s, quantity: 0 }))
+  }
   try {
-    return JSON.parse(sizes)
+    const parsed = JSON.parse(sizes)
+    // Handle new format: array of objects with size and quantity
+    if (
+      Array.isArray(parsed) &&
+      parsed.length > 0 &&
+      typeof parsed[0] === 'object' &&
+      'size' in parsed[0]
+    ) {
+      return parsed.map((item) => ({
+        size: item.size,
+        quantity: Number(item.quantity) || 0,
+      }))
+    }
+    // Handle old format: array of strings
+    return parsed.map((s) => ({ size: s, quantity: 0 }))
   } catch {
     // Split by comma and trim each item
     return sizes
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s)
+      .map((s) => ({ size: s, quantity: 0 }))
   }
 }
 
 onMounted(async () => {
   if (props.costume) {
-    imageUrl.value = await costumesStore.getDriveImageUrl(props.costume.image)
+    imageUrl.value = `https://drive.google.com/thumbnail?id=${props.costume.image}&sz=w1200`
     const sizes = parseSizes(props.costume.sizes)
-    selectedSize.value = sizes[0] || ''
+    selectedSize.value = sizes[0]?.size || ''
   }
 })
 
@@ -222,11 +257,15 @@ watch(
   (newCostume) => {
     if (newCostume) {
       const sizes = parseSizes(newCostume.sizes)
-      selectedSize.value = sizes[0] || ''
+      selectedSize.value = sizes[0]?.size || ''
       amount.value = 1
     }
   },
 )
+
+watch(selectedSize, () => {
+  amount.value = 1
+})
 
 watch(amount, (val) => {
   const numeric = Number(val || 0)

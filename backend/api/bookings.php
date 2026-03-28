@@ -231,8 +231,8 @@ function createBooking(): void
     $endDate = $body['endDate'];
 
     // Get total stock quantity for the costume
-    $stockStmt = $db->prepare('SELECT quantity FROM costume_stock WHERE costume_id = :costume_id');
-    $stockStmt->execute([':costume_id' => $costumeId]);
+    $stockStmt = $db->prepare('SELECT id, quantity FROM costume_stock WHERE costume_id = :costume_id AND size = :size');
+    $stockStmt->execute([':costume_id' => $costumeId, ':size' => $body['size']]);
     $stockRow = $stockStmt->fetch();
 
     if (!$stockRow) {
@@ -241,6 +241,7 @@ function createBooking(): void
         return;
     }
 
+    $stockId = $stockRow['id'];
     $totalStock = (int) $stockRow['quantity'];
 
     // Calculate total booked amount for overlapping dates
@@ -248,13 +249,13 @@ function createBooking(): void
     $bookedStmt = $db->prepare('
         SELECT COALESCE(SUM(amount_book), 0) AS total_booked
         FROM bookings
-        WHERE costume_id = :costume_id
+        WHERE costume_stock_id = :costume_stock_id
         AND status NOT IN ("cancelled", "returned")
         AND start_date <= :end_date
         AND end_date >= :start_date
     ');
     $bookedStmt->execute([
-        ':costume_id' => $costumeId,
+        ':costume_stock_id' => $stockId,
         ':start_date' => $startDate,
         ':end_date' => $endDate
     ]);
@@ -276,13 +277,13 @@ function createBooking(): void
 
     $stmt = $db->prepare(
         'INSERT INTO bookings
-            (costume_id, customer_id, start_date, end_date, amount_book, status, booking_date)
+            (costume_stock_id, customer_id, start_date, end_date, amount_book, status, booking_date)
          VALUES
-            (:costume_id, :customer_id, :start_date, :end_date, :amount, "waiting_approval", CURDATE())'
+            (:costume_stock_id, :customer_id, :start_date, :end_date, :amount, "waiting_approval", CURDATE())'
     );
 
     $stmt->execute([
-        ':costume_id' => (int) $body['costumeId'],
+        ':costume_stock_id' => (int) $stockId,
         ':customer_id' => (int) $body['customerId'],
         ':start_date' => $body['startDate'],
         ':end_date' => $body['endDate'],
@@ -292,9 +293,10 @@ function createBooking(): void
     $newId = (int) $db->lastInsertId();
 
     $stmt2 = $db->prepare(
-        'SELECT b.*, c.image AS costume_image
+        'SELECT b.*, c.image AS costume_image, cs.costume_id
          FROM bookings b
-         LEFT JOIN costumes c ON c.id = b.costume_id
+         LEFT JOIN costume_stock cs ON cs.id = b.costume_stock_id
+         LEFT JOIN costumes c ON c.id = cs.costume_id
          WHERE b.id = :id'
     );
     $stmt2->execute([':id' => $newId]);
