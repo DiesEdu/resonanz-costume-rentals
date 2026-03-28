@@ -793,7 +793,6 @@ textarea {
 .preview-media {
   position: relative;
   padding: 18px;
-  height: 240px;
   background-size: cover;
   background-position: center;
   display: grid;

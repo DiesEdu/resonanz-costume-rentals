@@ -61,7 +61,7 @@
               src="https://lh3.googleusercontent.com/d/1eTCuf4xBxmbgMgIkr53o4XVYBsbWwKNL=w1200?authuser=0"
               alt="Featured Costume"
               class="img-fluid"
-              style="max-height: 580px; width: 100%; object-fit: cover"
+              style="max-height: 25rem; width: 100%; object-fit: cover"
             />
             <div class="hero-badge">
               <div class="badge-num">★ 4.9</div>
