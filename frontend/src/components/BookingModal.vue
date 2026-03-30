@@ -58,8 +58,9 @@
                         :class="
                           selectedSize === sizeObj.size ? 'btn-primary' : 'btn-outline-secondary'
                         "
-                        @click="selectedSize = sizeObj.size"
+                        @click="selectSize(sizeObj)"
                       >
+                        <i :class="['me-1', genderIcon(sizeObj.gender)]"></i>
                         {{ sizeObj.size }}
                       </button>
                     </div>
@@ -162,6 +163,7 @@ const toastVariant = ref('primary')
 const toastIcon = ref('bi-info-circle')
 
 const selectedSize = ref('')
+const selectedGender = ref('unisex')
 const startDate = ref('')
 const endDate = ref('')
 const amount = ref(1)
@@ -177,6 +179,13 @@ const totalDays = computed(() => {
   const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
   return diff > 0 ? diff : 0
 })
+
+function genderIcon(gender) {
+  const g = (gender || 'unisex').toLowerCase()
+  if (g === 'male') return 'bi bi-gender-male'
+  if (g === 'female') return 'bi bi-gender-female'
+  return 'bi bi-people'
+}
 
 const selectedSizeObj = computed(() => {
   const sizes = parseSizes(props.costume?.sizes)
@@ -205,6 +214,12 @@ const isValid = computed(() => {
   )
 })
 
+function selectSize(sizeObj) {
+  selectedSize.value = sizeObj.size
+  selectedGender.value = sizeObj.gender || 'unisex'
+  amount.value = 1
+}
+
 function parseSizes(sizes) {
   if (!sizes) return []
   if (Array.isArray(sizes)) {
@@ -213,10 +228,11 @@ function parseSizes(sizes) {
       return sizes.map((item) => ({
         size: item.size,
         quantity: Number(item.quantity) || 0,
+        gender: item.gender || 'unisex',
       }))
     }
     // Handle old format: array of strings
-    return sizes.map((s) => ({ size: s, quantity: 0 }))
+    return sizes.map((s) => ({ size: s, quantity: 0, gender: 'unisex' }))
   }
   try {
     const parsed = JSON.parse(sizes)
@@ -230,36 +246,29 @@ function parseSizes(sizes) {
       return parsed.map((item) => ({
         size: item.size,
         quantity: Number(item.quantity) || 0,
+        gender: item.gender || 'unisex',
       }))
     }
     // Handle old format: array of strings
-    return parsed.map((s) => ({ size: s, quantity: 0 }))
+    return parsed.map((s) => ({ size: s, quantity: 0, gender: 'unisex' }))
   } catch {
     // Split by comma and trim each item
     return sizes
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s)
-      .map((s) => ({ size: s, quantity: 0 }))
+      .map((s) => ({ size: s, quantity: 0, gender: 'unisex' }))
   }
 }
 
 onMounted(async () => {
-  if (props.costume) {
-    imageUrl.value = `https://drive.google.com/thumbnail?id=${props.costume.image}&sz=w1200`
-    const sizes = parseSizes(props.costume.sizes)
-    selectedSize.value = sizes[0]?.size || ''
-  }
+  hydrateFromCostume(props.costume)
 })
 
 watch(
   () => props.costume,
   (newCostume) => {
-    if (newCostume) {
-      const sizes = parseSizes(newCostume.sizes)
-      selectedSize.value = sizes[0]?.size || ''
-      amount.value = 1
-    }
+    hydrateFromCostume(newCostume)
   },
 )
 
@@ -331,4 +340,15 @@ const showToast = (message, variant = 'primary', icon = 'bi-info-circle') => {
 }
 
 defineExpose({ show, hide })
+
+function hydrateFromCostume(costume) {
+  if (!costume) return
+  imageUrl.value = costume.image
+    ? `https://drive.google.com/thumbnail?id=${costume.image}&sz=w1200`
+    : null
+  const sizes = parseSizes(costume.sizes)
+  selectedSize.value = sizes[0]?.size || ''
+  selectedGender.value = sizes[0]?.gender || 'unisex'
+  amount.value = 1
+}
 </script>
