@@ -28,11 +28,11 @@
               Costumes
             </router-link>
           </li>
-          <!-- <li class="nav-item">
-            <router-link class="nav-link" to="/about" active-class="active" @click="closeNav">
-              About
+          <li class="nav-item">
+            <router-link class="nav-link" to="/accessories" active-class="active" @click="closeNav">
+              Accessories
             </router-link>
-          </li> -->
+          </li>
           <li class="nav-item">
             <router-link class="nav-link" to="/my-bookings" active-class="active" @click="closeNav">
               My Bookings

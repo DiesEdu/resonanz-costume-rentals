@@ -8,7 +8,7 @@
           class="display-4 fw-bold text-white mt-2"
           style="font-family: 'Playfair Display', serif"
         >
-          Our <em style="color: var(--gold)">Collection</em>
+          Our <em style="color: var(--gold)">Accessories</em>
         </h1>
         <div class="gold-divider mt-3 mb-4"></div>
         <p
@@ -18,7 +18,7 @@
             font-size: 1.15rem;
           "
         >
-          Handpicked costumes for every occasion and theme
+          Handpicked accessories for every occasion and theme
         </p>
       </div>
     </div>
@@ -128,7 +128,7 @@ const selectedCategory = ref('All')
 const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = 8
-const typeFilter = 'costume'
+const typeFilter = 'accessory'
 const canAddCostume = computed(() => ['costume_management', 'admin'].includes(authStore.role))
 
 const totalItems = computed(

@@ -20,6 +20,11 @@ const router = createRouter({
       component: () => import('../views/CostumesView.vue'),
     },
     {
+      path: '/accessories',
+      name: 'accessories',
+      component: () => import('../views/AccessoriesView.vue'),
+    },
+    {
       path: '/costume/:id',
       name: 'costume-detail',
       component: () => import('../views/CostumeDetail.vue'),

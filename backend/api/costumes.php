@@ -47,7 +47,7 @@ switch ($method) {
 
 // ─────────────────────────────────────────────
 
-function getCostumesCount(string $category = '', string $search = ''): int
+function getCostumesCount(string $category = '', string $search = '', string $type = ''): int
 {
     $db = getDB();
 
@@ -62,6 +62,11 @@ function getCostumesCount(string $category = '', string $search = ''): int
         $params[':category'] = $category;
     }
 
+    if ($type) {
+        $sql .= ' AND c.type = :type';
+        $params[':type'] = $type;
+    }
+
     if ($search) {
         $sql .= ' AND (c.name LIKE :search_name OR c.group_category LIKE :search_category)';
         $params[':search_name'] = '%' . $search . '%';
@@ -74,7 +79,13 @@ function getCostumesCount(string $category = '', string $search = ''): int
     return (int) $stmt->fetchColumn();
 }
 
-function getCostumesPaginated(int $limit, int $offset, string $category = '', string $search = ''): array
+function getCostumesPaginated(
+    int $limit,
+    int $offset,
+    string $category = '',
+    string $search = '',
+    string $type = ''
+): array
 {
     $db = getDB();
 
@@ -103,6 +114,11 @@ function getCostumesPaginated(int $limit, int $offset, string $category = '', st
     if ($category && $category !== 'All') {
         $sql .= ' AND c.group_category = :category';
         $params[':category'] = $category;
+    }
+
+    if ($type) {
+        $sql .= ' AND c.type = :type';
+        $params[':type'] = $type;
     }
 
     if ($search) {
@@ -136,9 +152,10 @@ function listCostumes(): void
 
     $category = $_GET['category'] ?? '';
     $search = $_GET['search'] ?? '';
+    $type = $_GET['type'] ?? '';
 
     // Get total count
-    $total = getCostumesCount($category, $search);
+    $total = getCostumesCount($category, $search, $type);
 
     // Calculate pagination
     $totalPages = ceil($total / $perPage);
@@ -146,7 +163,7 @@ function listCostumes(): void
     $offset = ($page - 1) * $perPage;
 
     // Get paginated data
-    $rows = getCostumesPaginated($perPage, $offset, $category, $search);
+    $rows = getCostumesPaginated($perPage, $offset, $category, $search, $type);
 
     // Group rows by costume and build sizes array
     $costumes = [];

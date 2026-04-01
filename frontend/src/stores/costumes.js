@@ -23,6 +23,7 @@ export const useCostumesStore = defineStore('costumes', () => {
   const fetchCostumes = async ({
     category = '',
     search = '',
+    type = '',
     page = 1,
     perPage = pagination.value.per_page,
   } = {}) => {
@@ -33,6 +34,8 @@ export const useCostumesStore = defineStore('costumes', () => {
       const params = new URLSearchParams()
       if (category && category !== 'All') params.set('category', category)
       if (search) params.set('search', search)
+      // filter between costume / accessory if provided
+      if (type) params.set('type', type)
       params.set('page', page)
       params.set('per_page', perPage)
 
